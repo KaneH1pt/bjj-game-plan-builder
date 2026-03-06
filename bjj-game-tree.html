@@ -1,0 +1,2019 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BJJ Game Tree</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0d0f12;
+    --surface: #161a20;
+    --surface2: #1e242d;
+    --border: #2a3140;
+    --favourite: #22c55e;
+    --favourite-glow: rgba(34, 197, 94, 0.2);
+    --evolving: #f59e0b;
+    --evolving-glow: rgba(245, 158, 11, 0.2);
+    --exploring: #ef4444;
+    --exploring-glow: rgba(239, 68, 68, 0.15);
+    --text: #e8ecf0;
+    --text-muted: #6b7a90;
+    --node-fill: #1e2836;
+    --node-stroke: #3d4f66;
+    --accent: #e8a020;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 3px;
+    color: var(--accent);
+  }
+
+  .logo span {
+    color: var(--text-muted);
+    font-size: 13px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 1px;
+    margin-left: 12px;
+    vertical-align: middle;
+  }
+
+  /* ─── FILTERS ─── */
+  .filters {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .filter-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-right: 4px;
+  }
+
+  .filter-btn {
+    padding: 5px 14px;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .filter-btn:hover { border-color: var(--text-muted); color: var(--text); }
+  .filter-btn.active { background: var(--surface2); border-color: var(--accent); color: var(--accent); }
+
+  .divider { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+
+  /* ─── LEGEND ─── */
+  .legend {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .legend-line {
+    width: 24px;
+    height: 2px;
+    border-radius: 1px;
+  }
+
+  /* ─── MAIN LAYOUT ─── */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ─── GRAPH AREA ─── */
+  #graph-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #graph-container svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .graph-hint {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+    border-radius: 3px;
+    pointer-events: none;
+    opacity: 0.8;
+  }
+
+  /* ─── NODES ─── */
+  .node circle {
+    fill: var(--node-fill);
+    stroke: var(--node-stroke);
+    stroke-width: 1.5px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+
+  .node circle:hover, .node.selected circle {
+    fill: var(--surface2);
+    stroke: var(--accent);
+    stroke-width: 2px;
+    filter: drop-shadow(0 0 8px rgba(232, 160, 32, 0.4));
+  }
+
+  .node text {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    fill: var(--text);
+    pointer-events: none;
+    text-anchor: middle;
+  }
+
+  .node .tag-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    fill: var(--text-muted);
+    text-anchor: middle;
+  }
+
+  /* ─── EDGES ─── */
+  .link {
+    cursor: pointer;
+  }
+
+  .link path {
+    fill: none;
+    stroke-width: 2px;
+    opacity: 0.7;
+    transition: opacity 0.2s ease, stroke-width 0.2s ease;
+  }
+
+  .link:hover path, .link.selected path {
+    stroke-width: 3px;
+    opacity: 1;
+  }
+
+  .link.favourite path { stroke: var(--favourite); }
+  .link.evolving path  { stroke: var(--evolving); }
+  .link.exploring path { stroke: var(--exploring); }
+
+  .link.favourite:hover path, .link.favourite.selected path {
+    filter: drop-shadow(0 0 4px var(--favourite));
+  }
+
+  .link.evolving:hover path, .link.evolving.selected path {
+    filter: drop-shadow(0 0 4px var(--evolving));
+  }
+
+  .link-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    fill: var(--text-muted);
+    pointer-events: none;
+    cursor: pointer;
+  }
+
+  /* ─── SIDE PANEL ─── */
+  #panel {
+    width: 0;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    overflow: hidden;
+    transition: width 0.25s ease;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #panel.open {
+    width: 340px;
+  }
+
+  .panel-inner {
+    width: 340px;
+    padding: 24px;
+    overflow-y: auto;
+    height: 100%;
+  }
+
+  .panel-type {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  .panel-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px;
+    letter-spacing: 2px;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .panel-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 2px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+
+  .status-badge.favourite { background: var(--favourite-glow); color: var(--favourite); border: 1px solid var(--favourite); }
+  .status-badge.evolving  { background: var(--evolving-glow);  color: var(--evolving);  border: 1px solid var(--evolving); }
+  .status-badge.exploring { background: var(--exploring-glow); color: #ef4444;          border: 1px solid var(--exploring); }
+
+  .tag-badges {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    margin-top: 8px;
+  }
+
+  .tag-badge {
+    padding: 2px 8px;
+    border-radius: 2px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    background: var(--surface2);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+  }
+
+  .panel-section {
+    margin-bottom: 20px;
+  }
+
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .notes-text {
+    font-size: 13px;
+    color: #9aa8ba;
+    line-height: 1.7;
+  }
+
+  .video-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    text-decoration: none;
+    color: var(--text);
+    font-size: 13px;
+    margin-bottom: 6px;
+    transition: all 0.15s ease;
+  }
+
+  .video-link:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .video-icon {
+    width: 28px;
+    height: 28px;
+    background: var(--border);
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 12px;
+  }
+
+  .video-title {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .panel-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    width: 28px;
+    height: 28px;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+  }
+
+  .panel-close:hover { border-color: var(--text); color: var(--text); }
+
+  .from-to {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    flex-wrap: wrap;
+  }
+
+  .from-to-node {
+    padding: 3px 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--text);
+  }
+
+  .arrow-icon { color: var(--accent); }
+
+  .empty-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    text-align: center;
+    gap: 8px;
+  }
+
+  .empty-panel .big-icon { font-size: 32px; opacity: 0.3; }
+
+  /* scrollbar */
+  .panel-inner::-webkit-scrollbar { width: 4px; }
+  .panel-inner::-webkit-scrollbar-track { background: transparent; }
+  .panel-inner::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     DATA — edit this block to update your game tree
+     ═══════════════════════════════════════════════════════════════
+  
+  NODE FIELDS:
+    id       — unique string, used to link edges
+    label    — display name on graph
+    notes    — text shown in side panel (can be empty string)
+    tags     — array, any combo of "gi" and "nogi"
+    videos   — array of { title, url }
+
+  EDGE FIELDS:
+    id       — unique string
+    from     — source node id
+    to       — target node id
+    label    — short label shown on graph (keep under ~25 chars)
+    notes    — longer description in side panel
+    status   — "favourite" | "evolving" | "exploring"
+    tags     — array, any combo of "gi" and "nogi"
+    videos   — array of { title, url }
+═══════════════════════════════════════════════════════════════ -->
+<script id="data-block" type="application/json">
+{
+  "nodes": [
+    {
+      "id": "standing",
+      "label": "Standing",
+      "notes": "Starting position. Most matches begin here. Entry point for all guard pulls.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "pull_guard_foh",
+      "label": "Pull Guard\n(Foot on Hip)",
+      "notes": "Sit to the mat, right foot on their hip — this is the gateway position. What happens next depends entirely on their reaction. The foot on hip creates distance and framing; from here the tree opens up.",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "dlr",
+      "label": "De La Riva",
+      "notes": "Left DLR hook established behind their lead leg, right foot still on hip or bicep. Ideal outcome from the pull. Danger zone for them — sweeps and back takes available.",
+      "tags": ["gi", "nogi"],
+      "videos": [
+        { "title": "DLR fundamentals — Bernardo Faria", "url": "https://www.youtube.com/watch?v=example1" }
+      ]
+    },
+    {
+      "id": "full_guard",
+      "label": "Full Guard",
+      "notes": "Closed guard fallback when DLR doesn't establish — they didn't give the leg. Good control but limited offence at blue belt. Priority: work back to open guard or set up a sweep.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "guard_retention",
+      "label": "Guard Retention",
+      "notes": "Reactive position — they've shoved my foot or are stepping around before I can establish. Need to recover frames fast and reconnect.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "back_take",
+      "label": "Back Take",
+      "notes": "Primary goal from DLR. Seat belt grip, hooks in. Most dominant finish position in BJJ.",
+      "tags": ["gi", "nogi"],
+      "videos": [
+        { "title": "DLR to back — Keenan Cornelius", "url": "https://www.youtube.com/watch?v=example2" }
+      ]
+    },
+    {
+      "id": "x_guard",
+      "label": "X-Guard",
+      "notes": "Alternative from DLR when they step wide trying to smash. High sweep percentage from here.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "passed",
+      "label": "Guard Passed",
+      "notes": "Bad outcome. They've established side control or knee-on-belly. Priority: recover guard ASAP, don't give up position.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "dlr_sweep",
+      "label": "DLR Sweep",
+      "notes": "Used DLR hook to lift their base and swept to top. Now in top position — work to pass their guard.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "arm_drag",
+      "label": "Arm Drag",
+      "notes": "Standing, no-gi. Got the drag — their arm is across, their back is exposed. Foot out, sit to the mat to pull them into the takedown or step to the back.",
+      "tags": ["nogi"],
+      "videos": []
+    },
+    {
+      "id": "double_collar_grip",
+      "label": "Double Collar\n(One Side)",
+      "notes": "Both hands on collar on one side, creating a load. Sit down to force them to step — creates the single leg opportunity. Gi only.",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "single_leg_top",
+      "label": "Single Leg / Top",
+      "notes": "Takedown landed — in top position from a single leg finish. Now look to pass or stabilise.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "collar_sleeve",
+      "label": "Collar Sleeve",
+      "notes": "Collar and sleeve grip — most effective when they are two square on landing. Creates off-balancing angles that DLR struggles with from a square stance. Work to break posture and attack sweeps.",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "lasso_guard",
+      "label": "Lasso Guard",
+      "notes": "Switched from DLR hook to lasso on the same leg — triggered when they sit down or squat to kill the DLR frames. Lasso survives their posture change better than DLR hook.",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "dlr_hip_hook",
+      "label": "DLR Hip Hook",
+      "notes": "They've cleared the outside leg hook so switched the DLR hook up onto their hip instead. Keeps you connected and in the position rather than losing the frame entirely. Different leverage to the leg hook — worth exploring what attacks open up from here.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "omoplata",
+      "label": "Omoplata",
+      "notes": "From collar sleeve — create space to access the hip, swing leg over the shoulder. Almost landed this. The entry from collar sleeve feels available, the finish needs work.",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "triangle",
+      "label": "Triangle",
+      "notes": "From collar sleeve — use the space created to shoot the triangle. Haven't landed it yet. The collar sleeve angle should give access but the lock-up timing isn't there.",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "knee_shield",
+      "label": "Knee Shield",
+      "notes": "Land here reactively — being hammered or they've started to pass. Not an intentional entry, it's a survival position. Frame with the knee across their hip/chest to stop the pass completing. Three options from here.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "knee_shield_sweep",
+      "label": "Sweep (Top)",
+      "notes": "From knee shield — kick their leg out to off-balance them and sweep to top. Most direct offensive option from the position.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "x_guard_entry",
+      "label": "X-Guard Entry",
+      "notes": "From knee shield — push their shoulder to rock them over you, use the momentum to access a type of X-guard underneath. Working on making this reliable.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "knee_shield_underhook",
+      "label": "Underhook / Half Guard",
+      "notes": "From knee shield — working on getting the underhook to recover to a proper half guard or come up on the shot. Still being developed.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "side_control_top",
+      "label": "Side Control Top",
+      "notes": "Top position — reached via sweep, takedown or if they give it up. Primary goal: transition to a more dominant position or attack. Don't sit here too long, keep moving.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "knee_on_belly",
+      "label": "Knee on Belly",
+      "notes": "Transition from side control — knee drives into their solar plexus, creates pressure and forces a reaction. Their reaction tells you what comes next: turn in or turn away.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "darce",
+      "label": "Darce Choke",
+      "notes": "They turn in to escape knee on belly — arm goes over their neck, darce grip locks in. Working on this. The turn-in is the trigger, need to be ready to catch it.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "step_over",
+      "label": "Step Over Head",
+      "notes": "They turn away from knee on belly — step over their head. Not sure where to go from here yet, but technical mount feels like the natural direction.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "technical_mount",
+      "label": "Technical Mount",
+      "notes": "High mount variation — knee up by their head, very controlling. Destination from step over. Submissions and back takes available from here but not yet mapped.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "bread_cutter",
+      "label": "Bread Cutter Choke",
+      "notes": "From side control top — cross collar choke using the near lapel. Working on this as a direct attack from side control rather than transitioning to KOB first.",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "their_closed_guard",
+      "label": "Their Closed Guard",
+      "notes": "They have closed guard — can't stand up, can't pass yet. Priority: break the guard open first. Posture up, push on their hips or use elbow/knee to break the closed guard before attempting any pass. Until it's open you have no passing options.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "their_open_guard",
+      "label": "Their Open Guard",
+      "notes": "Guard is open — distance management is the game now. Kill their hooks if they have them, step back to kill spider guard, manage their grips before committing to a pass. What pass becomes available depends on what they give you.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "knee_cut_pass",
+      "label": "Knee Cut Pass",
+      "notes": "Left side only. Stand in their guard with collar pressure on their neck to open it, leg lift to create space, drive the knee cut through. Can't replicate this on right side yet — a clear gap.",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "their_knee_shield",
+      "label": "Their Knee Shield",
+      "notes": "They've caught you in their knee shield while passing. Two options: smash the knee by grabbing their floor-facing collar and driving the elbow down, or lift the knee out of the way.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "over_under_pass",
+      "label": "Over-Under Pass",
+      "notes": "Left side only. One arm over, one arm under their legs — drive through to pass. Works occasionally but not reliable yet. Right side not there.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "shin_on_shin",
+      "label": "Shin on Shin",
+      "notes": "Seated guard entry into leg entanglement game. Attack left leg only currently. Push out their right leg, lift your shin to lift theirs — gateway to ashi garami.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "ashi_garami",
+      "label": "Ashi Garami",
+      "notes": "Left leg attack. Left foot in their hip, right foot on their backside, their foot in your armpit. Single leg X / ashi position — two main options from here: dumb dumb sweep or ankle lock.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "dumb_dumb_sweep",
+      "label": "Dumb Dumb Sweep",
+      "notes": "From ashi — grab their other foot, lift hips, corkscrew to the left. Sweeps them to the mat. Attack goes to the left only currently.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "ankle_lock",
+      "label": "Ankle Lock",
+      "notes": "From ashi garami — attack the ankle lock on their left foot. Foot in armpit, hip extension to finish. Your first mapped submission from a leg entanglement.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "leg_trap_top",
+      "label": "Leg Trap Top",
+      "notes": "Dumb dumb sweep landed them on their back with their leg still in your control. Right leg thrown over to trap at the knee — very controlling. Attack the ankle from here.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "full_mount",
+      "label": "Full Mount",
+      "notes": "Technique: drop hips low to make the bridge harder. Hook their legs if possible to prevent the escape. Hug their head — sitting up tall is tempting but opens you to a bridge and roll. Staying flat and heavy is the priority. Struggle to maintain — this is a known gap.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "americana",
+      "label": "Americana",
+      "notes": "From mount — attempt the americana as an arm attack, but often used as a distraction to set up the arm triangle rather than a primary finish. Paint brush the arm to the mat, figure four grip.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "arm_triangle",
+      "label": "Arm Triangle",
+      "notes": "From mount — trap their head and arm together, squeeze. Enter by baiting the americana: they defend by pulling the arm in which tightens the triangle. Slide to the side to finish. Working on this.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "far_side_arm_attack",
+      "label": "Far Arm Attack\n(Distraction)",
+      "notes": "From side control top — attack their far side arm to distract and occupy their defence. Real goal is to use their reaction to sneak the knee under their nearside and advance position.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "turtle",
+      "label": "Turtle",
+      "notes": "Defensive position — on all fours, protecting the back. Not somewhere you want to stay. Primary goal: step one leg behind them and roll to back to recover guard. They will be trying to take your back from here.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "shoulder_roll_defense",
+      "label": "Shoulder Roll\n(Defense)",
+      "notes": "Transitional — happens as they start to take the back, before turtle is even established. Roll onto the shoulder into them to disrupt the back take attempt before it completes. A felt movement, hard to explain — the timing is everything. Destination varies.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "own_lapel_choke",
+      "label": "Own Lapel Choke\n(TBC name)",
+      "notes": "From side control top — grab your own lapel, loop it under their far arm (think it goes under), then rotate into them to choke with the collar. Not sure of the correct name — possibly a loop choke variation or paper cutter variant. Ask instructor. The mechanic is the own lapel feeding under their far arm before the rotation.",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "back_defence",
+      "label": "Back Defence",
+      "notes": "They have your back with hooks in. Priority order: (1) defend the choke — hands on their choking arm, chin down, create space. Nothing else matters until the choke is safe. (2) move their legs to start working back to the mat. (3) get back to floor, turn in.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "back_to_floor",
+      "label": "Back to Floor\n(Turning In)",
+      "notes": "Managed to get back to the mat — choke defended, hooks disrupted. Now turn into them. Don't rush this, turn in under control or they re-establish.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "kimura_harness",
+      "label": "Kimura + Head Harness",
+      "notes": "From technical mount — kimura grip on their arm combined with a head harness. Controlling position that sets up the roll. The combination of arm and head control limits their defence significantly.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "back_control_roll",
+      "label": "Back Control\n(via Roll)",
+      "notes": "Roll back from the kimura harness to take back control. Kimura grip maintained through the roll — the arm is still trapped as you land.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "collar_grip_forward",
+      "label": "Collar Grip\n(Roll Forward)",
+      "notes": "From back control — swap the kimura to a collar grip, then roll forward the other way. The direction change creates the leg on shoulder entry.",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "leg_on_shoulder",
+      "label": "Leg on Shoulder",
+      "notes": "Result of the forward roll — their leg comes up onto your shoulder. Entry point for the Peruvian necktie. Control before attacking.",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "peruvian_necktie",
+      "label": "Peruvian Necktie",
+      "notes": "Finish from leg on shoulder — arm under their neck, leg on shoulder creates the angle, pressure down to choke. A rare chain — the whole technical mount sequence is the setup.",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "hand_across",
+      "label": "Russian Tie\n(Arm Across)",
+      "notes": "From closed guard — pull their hand across or take a Russian tie to drag the arm across the body. Primary goal: take the back as they turn to recover the arm. Also a general control mechanism that disrupts posture — other attacks may open but back take is the intent.",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "overhook_collar",
+      "label": "Overhook + Collar",
+      "notes": "From closed guard — overhook their arm and grab their collar with the same side hand. Then bring the other knee up to their bicep to pin the arm and create the triangle entry angle. Triangle not yet landed — the setup feels available but the finish needs work.",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "k_guard",
+      "label": "K Guard",
+      "notes": "From closed guard — want to explore this. K guard (also called modified K guard or Klock) — knee across their thigh, foot hooking behind. Opens leg entanglement entries similar to ashi. Route to explore.",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    }
+  ],
+
+  "edges": [
+    {
+      "id": "e1",
+      "from": "standing",
+      "to": "pull_guard_foh",
+      "label": "Pull guard, foot on hip",
+      "notes": "Sit to the mat, place right foot on their hip to frame distance. This is the deliberate entry — the first decision in the tree. Gi only for now as the grips change the setup significantly.",
+      "status": "favourite",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "e2",
+      "from": "pull_guard_foh",
+      "to": "dlr",
+      "label": "They step in → DLR hook",
+      "notes": "They walk into range. Left leg shoots behind their lead leg, DLR hook establishes. Ideal branch — this is what you want.",
+      "status": "favourite",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "e3",
+      "from": "pull_guard_foh",
+      "to": "full_guard",
+      "label": "They don't step in",
+      "notes": "They stay upright and don't give the leg. Close guard to maintain control and reset — DLR wasn't available.",
+      "status": "evolving",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "e4",
+      "from": "pull_guard_foh",
+      "to": "guard_retention",
+      "label": "They shove foot off hip",
+      "notes": "They aggressively clear the right foot before the hook can land. Drop immediately to retention frames — don't let them come forward unopposed.",
+      "status": "evolving",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "e5",
+      "from": "dlr",
+      "to": "back_take",
+      "label": "Berimbolo / roll",
+      "notes": "Invert under them, take the back. Primary threat from DLR — the move they have to respect.",
+      "status": "favourite",
+      "tags": ["gi", "nogi"],
+      "videos": [
+        { "title": "DLR berimbolo entry", "url": "https://www.youtube.com/watch?v=example3" }
+      ]
+    },
+    {
+      "id": "e6",
+      "from": "dlr",
+      "to": "dlr_sweep",
+      "label": "Footlift sweep",
+      "notes": "Use DLR hook to lift their base, sweep to top position.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e7",
+      "from": "dlr",
+      "to": "x_guard",
+      "label": "They step wide",
+      "notes": "They try to smash DLR by stepping around. Transition to X-guard before they can settle.",
+      "status": "exploring",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e8",
+      "from": "dlr",
+      "to": "passed",
+      "label": "They clear the hook",
+      "notes": "Danger — they've cleared the DLR hook and are driving into a pass. Need to transition to retention immediately.",
+      "status": "exploring",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e9",
+      "from": "guard_retention",
+      "to": "pull_guard_foh",
+      "label": "Reset foot to hip",
+      "notes": "Recovered enough to get the foot back on the hip. Back to the gateway position.",
+      "status": "evolving",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "e10",
+      "from": "guard_retention",
+      "to": "dlr",
+      "label": "Re-establish hook",
+      "notes": "Skip the reset — go directly to DLR hook from retention if the leg is there.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e11",
+      "from": "guard_retention",
+      "to": "full_guard",
+      "label": "Recover to closed",
+      "notes": "Bring knees in, close guard to reset and regroup.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e12",
+      "from": "guard_retention",
+      "to": "passed",
+      "label": "Failed to retain",
+      "notes": "Guard was passed despite retention attempt. Survival mode.",
+      "status": "exploring",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e13",
+      "from": "full_guard",
+      "to": "dlr",
+      "label": "Open & establish DLR",
+      "notes": "Open closed guard, get foot back to hip, work into DLR.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e14",
+      "from": "standing",
+      "to": "arm_drag",
+      "label": "Arm drag",
+      "notes": "No-gi standing — catch their wrist and elbow, pull the arm across to expose the back. Foot comes out, sit to the mat.",
+      "status": "evolving",
+      "tags": ["nogi"],
+      "videos": []
+    },
+    {
+      "id": "e15",
+      "from": "arm_drag",
+      "to": "back_take",
+      "label": "Step behind, seat belt",
+      "notes": "Back is exposed from the drag — step around, get seat belt, establish hooks.",
+      "status": "evolving",
+      "tags": ["nogi"],
+      "videos": []
+    },
+    {
+      "id": "e16",
+      "from": "arm_drag",
+      "to": "single_leg_top",
+      "label": "Sit down, pull to single",
+      "notes": "Foot out, sit to the mat, use the momentum of the drag to pull them into a single leg finish.",
+      "status": "evolving",
+      "tags": ["nogi"],
+      "videos": []
+    },
+    {
+      "id": "e17",
+      "from": "standing",
+      "to": "double_collar_grip",
+      "label": "Double collar, one side",
+      "notes": "Gi only. Both grips on collar same side — loads them up. Sit down to force a reaction.",
+      "status": "evolving",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "e18",
+      "from": "double_collar_grip",
+      "to": "single_leg_top",
+      "label": "Sit down → single leg",
+      "notes": "Sit down with the double collar load — they step to base, you catch the single leg and finish.",
+      "status": "evolving",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "e19",
+      "from": "pull_guard_foh",
+      "to": "collar_sleeve",
+      "label": "They're two square",
+      "notes": "On landing they're square-on rather than staggered — DLR hook won't bite well. Collar sleeve is the better entry from this stance.",
+      "status": "evolving",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "e20",
+      "from": "dlr",
+      "to": "lasso_guard",
+      "label": "They sit / squat down",
+      "notes": "They've sat or squatted to kill the DLR leg frames. Switch the hook leg to lasso before they fully flatten the guard.",
+      "status": "exploring",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "e21",
+      "from": "dlr",
+      "to": "dlr_hip_hook",
+      "label": "They clear outside hook",
+      "notes": "They've removed the leg hook from behind their lead leg. Rather than losing the position, switch the same leg's hook up onto their hip to stay connected.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e22",
+      "from": "collar_sleeve",
+      "to": "omoplata",
+      "label": "Create space, access hip",
+      "notes": "Use collar sleeve to break their posture and create space. Swing leg over their shoulder to enter the omoplata. Almost landed this — the entry is there, finish needs drilling.",
+      "status": "evolving",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "e23",
+      "from": "collar_sleeve",
+      "to": "triangle",
+      "label": "Create space, shoot triangle",
+      "notes": "Same initial space creation as the omoplata entry, but shoot the triangle instead. Haven't landed it yet — timing of the lock-up is the gap.",
+      "status": "exploring",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "e24",
+      "from": "guard_retention",
+      "to": "knee_shield",
+      "label": "They start to pass",
+      "notes": "Retention wasn't enough to stop them — reactive drop to knee shield as last line before full pass.",
+      "status": "favourite",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e25",
+      "from": "passed",
+      "to": "knee_shield",
+      "label": "Catch knee shield",
+      "notes": "They're passing but not settled yet — catch the knee shield before they establish full side control.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e26",
+      "from": "knee_shield",
+      "to": "knee_shield_sweep",
+      "label": "Kick leg out",
+      "notes": "Kick their near leg out to destroy their base, sweep to top.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e27",
+      "from": "knee_shield",
+      "to": "x_guard_entry",
+      "label": "Push shoulder, rock over",
+      "notes": "Push their shoulder to rock them forward over you, access X-guard underneath from the momentum.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e28",
+      "from": "knee_shield",
+      "to": "knee_shield_underhook",
+      "label": "Fight for underhook",
+      "notes": "Working on getting the underhook from knee shield to come up or recover half guard properly.",
+      "status": "exploring",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e29",
+      "from": "dlr_sweep",
+      "to": "side_control_top",
+      "label": "Settle into side control",
+      "notes": "Sweep landed, come up into side control top.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e30",
+      "from": "single_leg_top",
+      "to": "side_control_top",
+      "label": "Finish takedown, side control",
+      "notes": "Takedown finished, settle into side control.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e31",
+      "from": "knee_shield_sweep",
+      "to": "side_control_top",
+      "label": "Sweep lands, top position",
+      "notes": "Knee shield sweep completed, come up to side control.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e32",
+      "from": "side_control_top",
+      "to": "knee_on_belly",
+      "label": "Transition to KOB",
+      "notes": "Step knee across onto their belly — creates pressure and forces a reaction. Their response dictates the next move.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e33",
+      "from": "knee_on_belly",
+      "to": "darce",
+      "label": "They turn in",
+      "notes": "They turn toward you to escape the knee pressure — arm is there, darce entry opens up. Need to be pre-loaded and ready to catch it.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e34",
+      "from": "knee_on_belly",
+      "to": "step_over",
+      "label": "They turn away",
+      "notes": "They turn away from the knee pressure — step over their head.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e35",
+      "from": "step_over",
+      "to": "technical_mount",
+      "label": "Settle into technical mount",
+      "notes": "Step over the head leads to technical mount — knee up, controlling position. Still working out what to attack from here.",
+      "status": "exploring",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e36",
+      "from": "side_control_top",
+      "to": "bread_cutter",
+      "label": "Grab near lapel",
+      "notes": "From side control, feed the near lapel across for the bread cutter. Direct attack without needing to transition to KOB first.",
+      "status": "evolving",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "e37",
+      "from": "their_open_guard",
+      "to": "knee_cut_pass",
+      "label": "Kill hooks, stand, knee cut",
+      "notes": "Manage their hooks first, stand in the open guard, collar on their neck, leg lift to create space, knee cut through. Left side only currently.",
+      "status": "evolving",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "e38",
+      "from": "their_open_guard",
+      "to": "over_under_pass",
+      "label": "Over-under grip",
+      "notes": "Occasional option — one arm over, one under. Left side only. Not reliable yet.",
+      "status": "exploring",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e39",
+      "from": "knee_cut_pass",
+      "to": "their_knee_shield",
+      "label": "They catch knee shield",
+      "notes": "Mid knee-cut they've framed with the knee shield to stop the pass.",
+      "status": "favourite",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e40",
+      "from": "their_knee_shield",
+      "to": "side_control_top",
+      "label": "Smash knee — elbow down",
+      "notes": "Grab their floor-facing collar, drive elbow down to flatten the knee shield and pass through to side control.",
+      "status": "evolving",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "e41",
+      "from": "their_knee_shield",
+      "to": "side_control_top",
+      "label": "Lift knee out of the way",
+      "notes": "Alternative to smashing — lift the knee clear and drive through to side control.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e42",
+      "from": "knee_cut_pass",
+      "to": "side_control_top",
+      "label": "Pass completes",
+      "notes": "Knee cut went through cleanly — settle into side control top.",
+      "status": "evolving",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "e43",
+      "from": "over_under_pass",
+      "to": "side_control_top",
+      "label": "Pass completes",
+      "notes": "Over-under drove through — side control.",
+      "status": "exploring",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e44",
+      "from": "dlr",
+      "to": "shin_on_shin",
+      "label": "Transition to shin on shin",
+      "notes": "From DLR, adjust to shin on shin entry to attack the leg entanglement game.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e45",
+      "from": "shin_on_shin",
+      "to": "ashi_garami",
+      "label": "Push right, lift shin",
+      "notes": "Push out their right leg, lift your shin to elevate theirs — drop into ashi. Left leg attack only. Left foot lands on their hip, right foot on their backside, foot in armpit.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e46",
+      "from": "ashi_garami",
+      "to": "dumb_dumb_sweep",
+      "label": "Grab other foot, corkscrew",
+      "notes": "Grab their free foot with both hands, lift the hips and corkscrew to the left. Sweeps them — left side only currently.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e47",
+      "from": "ashi_garami",
+      "to": "ankle_lock",
+      "label": "Attack ankle lock",
+      "notes": "Foot in armpit, hip extension to attack the ankle lock on their left foot. Direct submission from ashi.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e48",
+      "from": "dumb_dumb_sweep",
+      "to": "leg_trap_top",
+      "label": "They land on back, trap knee",
+      "notes": "Corkscrew lands them on their back — throw right leg over to trap at the knee. Still have their leg in full control.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e49",
+      "from": "leg_trap_top",
+      "to": "ankle_lock",
+      "label": "Attack ankle",
+      "notes": "Leg trapped at the knee, attack the ankle lock. They can't move well — this is the finish.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e50",
+      "from": "technical_mount",
+      "to": "full_mount",
+      "label": "Settle into full mount",
+      "notes": "From technical mount, drop hips and settle into full mount. Drop weight, hook legs, hug head.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e51",
+      "from": "back_take",
+      "to": "full_mount",
+      "label": "They escape to mount",
+      "notes": "Lost the back position — they've turned in but haven't escaped fully, land in mount.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e52",
+      "from": "full_mount",
+      "to": "americana",
+      "label": "Paintbrush arm to mat",
+      "notes": "Spot the arm, paintbrush it to the mat. Primary attack but also used as a setup — their defence of the americana often gives the arm triangle.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e53",
+      "from": "americana",
+      "to": "arm_triangle",
+      "label": "They pull arm in to defend",
+      "notes": "They defend the americana by pulling the arm in — this tightens the arm triangle. Trap their head and arm together, slide to the side to finish.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e54",
+      "from": "full_mount",
+      "to": "arm_triangle",
+      "label": "Trap head and arm directly",
+      "notes": "Sometimes go directly to the arm triangle without the americana bait — trap head and arm, squeeze, slide to finish side.",
+      "status": "exploring",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e55",
+      "from": "full_mount",
+      "to": "side_control_top",
+      "label": "They bridge, lose mount",
+      "notes": "They bridge and roll successfully — land in side control rather than losing position entirely if possible.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e56",
+      "from": "side_control_top",
+      "to": "far_side_arm_attack",
+      "label": "Attack far arm",
+      "notes": "Reach across and attack their far side arm — not necessarily to finish, primarily to distract and occupy their defence so the knee can sneak through.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e57",
+      "from": "far_side_arm_attack",
+      "to": "technical_mount",
+      "label": "Sneak knee under nearside",
+      "notes": "While they defend the far arm, knee slides under their nearside into technical mount.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e58",
+      "from": "side_control_top",
+      "to": "technical_mount",
+      "label": "Collapse legs, shuffle inside",
+      "notes": "Push on their pant leg to collapse their legs, shuffle hips to get inside and take technical mount directly.",
+      "status": "evolving",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "e59",
+      "from": "passed",
+      "to": "turtle",
+      "label": "Roll to turtle",
+      "notes": "Guard passed — roll to turtle rather than give up flat back. Buys time and creates an escape opportunity.",
+      "status": "favourite",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e60",
+      "from": "guard_retention",
+      "to": "turtle",
+      "label": "Retention failed, turtle",
+      "notes": "Couldn't retain guard — turtle as last resort before flat back.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e61",
+      "from": "turtle",
+      "to": "full_guard",
+      "label": "Step behind, roll to back",
+      "notes": "Step one leg behind their leg, roll onto your back and bring them into your guard. The deliberate turtle escape — timing needs to be right before they get hooks in.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e62",
+      "from": "back_take",
+      "to": "shoulder_roll_defense",
+      "label": "As they attempt back take",
+      "notes": "They're starting to take the back but haven't completed it — roll the shoulder into them before turtle even establishes. Transitional and timing-dependent.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e63",
+      "from": "shoulder_roll_defense",
+      "to": "full_guard",
+      "label": "Roll lands in guard",
+      "notes": "Best case — shoulder roll disrupts the back take and you end up in guard.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e64",
+      "from": "shoulder_roll_defense",
+      "to": "turtle",
+      "label": "Roll lands in turtle",
+      "notes": "Shoulder roll didn't fully escape — end up in turtle rather than guard. At least the back take was disrupted.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e65",
+      "from": "side_control_top",
+      "to": "own_lapel_choke",
+      "label": "Feed own lapel under far arm",
+      "notes": "Grab own lapel, loop it under their far arm, rotate into them to apply the choke. Name TBC — confirm with instructor.",
+      "status": "exploring",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "e66",
+      "from": "back_take",
+      "to": "back_defence",
+      "label": "They take back successfully",
+      "notes": "Hooks in, they have the position. Choke defence is the immediate priority before anything else.",
+      "status": "favourite",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e67",
+      "from": "back_defence",
+      "to": "back_to_floor",
+      "label": "Choke defended, move legs",
+      "notes": "Choke is safe — now work to move their legs and get the back to the mat. Control their bottom leg, slide hips, work back to floor.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e68",
+      "from": "back_to_floor",
+      "to": "their_closed_guard",
+      "label": "Turn in to face them",
+      "notes": "Back on the mat — turn into them. They'll likely close guard. Not ideal but choke is gone and position is recoverable.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e70",
+      "from": "their_closed_guard",
+      "to": "their_open_guard",
+      "label": "Break guard open",
+      "notes": "Posture up, use elbow or knee to break the closed guard open. Until it's open no passing is possible — this is the prerequisite step.",
+      "status": "evolving",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e69",
+      "from": "back_to_floor",
+      "to": "guard_retention",
+      "label": "Turn in, scramble to guard",
+      "notes": "Turn in creates a scramble — fight to recover your own guard rather than end up in theirs.",
+      "status": "exploring",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e71",
+      "from": "technical_mount",
+      "to": "kimura_harness",
+      "label": "Kimura grip + head harness",
+      "notes": "From technical mount — secure kimura grip on their arm and add the head harness. Both controls together set up the back roll.",
+      "status": "exploring",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e72",
+      "from": "kimura_harness",
+      "to": "back_control_roll",
+      "label": "Roll back",
+      "notes": "Roll back maintaining the kimura grip — takes back control with the arm still trapped.",
+      "status": "exploring",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    },
+    {
+      "id": "e73",
+      "from": "back_control_roll",
+      "to": "collar_grip_forward",
+      "label": "Swap to collar grip",
+      "notes": "Release kimura, take collar grip instead — sets up the forward roll in the opposite direction.",
+      "status": "exploring",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "e74",
+      "from": "collar_grip_forward",
+      "to": "leg_on_shoulder",
+      "label": "Roll forward",
+      "notes": "Roll forward the other way using the collar grip — their leg comes up onto your shoulder.",
+      "status": "exploring",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "e75",
+      "from": "leg_on_shoulder",
+      "to": "peruvian_necktie",
+      "label": "Arm under neck, pressure down",
+      "notes": "Arm under their neck, leg on shoulder creates the angle — pressure down to finish the choke.",
+      "status": "exploring",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "e76",
+      "from": "full_guard",
+      "to": "hand_across",
+      "label": "Russian tie, arm across",
+      "notes": "From closed guard — Russian tie or pull to drag their arm across the body. Sets up the back take as they try to recover.",
+      "status": "evolving",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "e79",
+      "from": "hand_across",
+      "to": "back_take",
+      "label": "They turn to recover arm",
+      "notes": "As they turn to recover the arm you follow them to the back — their rotation is the opening. Open guard to take the back.",
+      "status": "evolving",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "e77",
+      "from": "full_guard",
+      "to": "overhook_collar",
+      "label": "Overhook + collar grip",
+      "notes": "From closed guard — overhook their arm, grab collar, knee comes up to pin their bicep.",
+      "status": "evolving",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "e78",
+      "from": "overhook_collar",
+      "to": "triangle",
+      "label": "Shoot triangle",
+      "notes": "Knee to bicep creates the angle — shoot the triangle. Not landed yet, the setup is there but the lock-up timing is the gap.",
+      "status": "exploring",
+      "tags": ["gi"],
+      "videos": []
+    },
+    {
+      "id": "e80",
+      "from": "full_guard",
+      "to": "k_guard",
+      "label": "Open, enter K guard",
+      "notes": "Open closed guard and transition into K guard. Route to explore — not yet developed.",
+      "status": "exploring",
+      "tags": ["gi", "nogi"],
+      "videos": []
+    }
+  ]
+}
+</script>
+
+<!-- ═══════════════════════════════════════════ UI ═══════════════════════════════════════════ -->
+
+<header>
+  <div class="logo">BJJ Game Tree <span>BLUE BELT</span></div>
+  <div class="filters">
+    <span class="filter-label">GI</span>
+    <button class="filter-btn active" data-gi="all">All</button>
+    <button class="filter-btn" data-gi="gi">Gi</button>
+    <button class="filter-btn" data-gi="nogi">No-Gi</button>
+    <div class="divider"></div>
+    <span class="filter-label">STATUS</span>
+    <button class="filter-btn active" data-status="all">All</button>
+    <button class="filter-btn" data-status="favourite">Favourite</button>
+    <button class="filter-btn" data-status="evolving">Evolving</button>
+    <button class="filter-btn" data-status="exploring">Exploring</button>
+    <div class="divider"></div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-line" style="background:#22c55e"></div>Favourite</div>
+      <div class="legend-item"><div class="legend-line" style="background:#f59e0b"></div>Evolving</div>
+      <div class="legend-item"><div class="legend-line" style="background:#ef4444"></div>Exploring</div>
+    </div>
+  </div>
+</header>
+
+<div class="main">
+  <div id="graph-container">
+    <svg id="graph"></svg>
+    <div class="graph-hint">Click any node or path for details · Drag to reposition · Scroll to zoom</div>
+  </div>
+
+  <div id="panel">
+    <div class="panel-inner" id="panel-inner">
+      <div class="empty-panel">
+        <div class="big-icon">◎</div>
+        <div>Click a position or<br>transition to view details</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Load data ───────────────────────────────────────────────────
+const RAW = JSON.parse(document.getElementById('data-block').textContent);
+
+// ─── State ───────────────────────────────────────────────────────
+let filterGi = 'all';
+let filterStatus = 'all';
+let selectedId = null;
+
+// ─── D3 setup ────────────────────────────────────────────────────
+const svg = d3.select('#graph');
+const container = document.getElementById('graph-container');
+
+let width = container.clientWidth;
+let height = container.clientHeight;
+
+const g = svg.append('g').attr('class', 'root');
+
+const zoom = d3.zoom()
+  .scaleExtent([0.3, 3])
+  .on('zoom', e => g.attr('transform', e.transform));
+
+svg.call(zoom);
+
+// Arrow markers
+const defs = svg.append('defs');
+
+['favourite', 'evolving', 'exploring', 'favourite-sel', 'evolving-sel', 'exploring-sel'].forEach(id => {
+  const color = id.includes('favourite') ? '#22c55e' : id.includes('evolving') ? '#f59e0b' : '#ef4444';
+  defs.append('marker')
+    .attr('id', `arrow-${id}`)
+    .attr('viewBox', '0 -5 10 10')
+    .attr('refX', 32)
+    .attr('refY', 0)
+    .attr('markerWidth', 6)
+    .attr('markerHeight', 6)
+    .attr('orient', 'auto')
+    .append('path')
+    .attr('d', 'M0,-5L10,0L0,5')
+    .attr('fill', color);
+});
+
+// ─── Simulation ───────────────────────────────────────────────────
+const simulation = d3.forceSimulation()
+  .force('link', d3.forceLink().id(d => d.id).distance(180).strength(0.6))
+  .force('charge', d3.forceManyBody().strength(-600))
+  .force('center', d3.forceCenter(width / 2, height / 2))
+  .force('collision', d3.forceCollide().radius(60));
+
+// ─── Render ───────────────────────────────────────────────────────
+let linkGroup = g.append('g').attr('class', 'links');
+let nodeGroup = g.append('g').attr('class', 'nodes');
+
+// Keep stable node objects between renders so simulation positions persist
+let stableNodes = [];
+let stableLinks = [];
+
+function getFilteredData() {
+  const filteredNodes = RAW.nodes.filter(n => {
+    if (filterGi !== 'all' && !n.tags.includes(filterGi)) return false;
+    return true;
+  });
+  const nodeIds = new Set(filteredNodes.map(n => n.id));
+
+  const filteredEdges = RAW.edges.filter(e => {
+    if (!nodeIds.has(e.from) || !nodeIds.has(e.to)) return false;
+    if (filterGi !== 'all' && !e.tags.includes(filterGi)) return false;
+    if (filterStatus !== 'all' && e.status !== filterStatus) return false;
+    return true;
+  });
+
+  // Reuse existing node objects so simulation keeps their x/y/vx/vy
+  const nodeMap = new Map(stableNodes.map(n => [n.id, n]));
+  const nodes = filteredNodes.map(n => {
+    const existing = nodeMap.get(n.id);
+    return existing ? Object.assign(existing, n) : { ...n };
+  });
+
+  // Build link objects with source/target as node objects (D3 requirement)
+  // Reuse stable link objects too so D3 doesn't reset them
+  const linkMap = new Map(stableLinks.map(l => [l.id, l]));
+  const links = filteredEdges.map(e => {
+    const existing = linkMap.get(e.id);
+    const link = existing ? Object.assign(existing, e) : { ...e };
+    // D3 forceLink will replace source/target with node objects — set as ids for fresh links
+    if (!existing) {
+      link.source = e.from;
+      link.target = e.to;
+    }
+    return link;
+  });
+
+  stableNodes = nodes;
+  stableLinks = links;
+
+  return { nodes, links };
+}
+
+function render() {
+  const { nodes, links } = getFilteredData();
+
+  // ── Links ──────────────────────────────────────────────────────
+  const linkSel = linkGroup.selectAll('.link')
+    .data(links, d => d.id);
+
+  linkSel.exit().remove();
+
+  const linkEnter = linkSel.enter().append('g');
+  linkEnter.append('path');
+  linkEnter.append('text').attr('class', 'link-label');
+
+  const linkMerge = linkEnter.merge(linkSel);
+
+  // Update class + click handler on all (not just enter) so re-renders stay live
+  linkMerge
+    .attr('class', d => `link ${d.status}${selectedId === d.id ? ' selected' : ''}`)
+    .on('click', (event, d) => { event.stopPropagation(); selectEdge(d); });
+
+  linkMerge.select('path')
+    .attr('marker-end', d => `url(#arrow-${d.status})`);
+
+  // ── Nodes ──────────────────────────────────────────────────────
+  const nodeSel = nodeGroup.selectAll('.node')
+    .data(nodes, d => d.id);
+
+  nodeSel.exit().remove();
+
+  const nodeEnter = nodeSel.enter().append('g')
+    .call(d3.drag()
+      .on('start', dragStart)
+      .on('drag', dragged)
+      .on('end', dragEnd));
+
+  nodeEnter.append('circle').attr('r', 36);
+  nodeEnter.append('text').attr('dy', '-2px');
+  nodeEnter.append('text').attr('class', 'tag-text').attr('dy', '14px');
+
+  const nodeMerge = nodeEnter.merge(nodeSel);
+
+  nodeMerge
+    .attr('class', d => `node${selectedId === d.id ? ' selected' : ''}`)
+    .on('click', (event, d) => { event.stopPropagation(); selectNode(d); });
+
+  nodeMerge.select('text:not(.tag-text)').text(d => d.label);
+  nodeMerge.select('.tag-text').text(d => d.tags.join('/'));
+
+  // ── Simulation ─────────────────────────────────────────────────
+  simulation.nodes(nodes);
+  simulation.force('link').links(links); // same objects as DOM — D3 mutates source/target in place
+  simulation.alpha(0.4).restart();
+
+  simulation.on('tick', () => {
+    linkMerge.select('path').attr('d', d => {
+      const src = d.source, tgt = d.target;
+      if (!src || !tgt || src.x == null) return '';
+      const sx = src.x, sy = src.y, tx = tgt.x, ty = tgt.y;
+      const dx = tx - sx, dy = ty - sy;
+      const dr = Math.sqrt(dx * dx + dy * dy) || 1;
+
+      const hasReverse = links.some(l =>
+        l.id !== d.id &&
+        (l.source.id || l.source) === (tgt.id || tgt) &&
+        (l.target.id || l.target) === (src.id || src)
+      );
+      const cs = hasReverse ? dr * 0.35 : dr * 0.08;
+      const mx = (sx + tx) / 2 - dy * cs / dr;
+      const my = (sy + ty) / 2 + dx * cs / dr;
+      return `M${sx},${sy} Q${mx},${my} ${tx},${ty}`;
+    });
+
+    linkMerge.select('text').attr('x', d => {
+      const src = d.source, tgt = d.target;
+      if (!src || !tgt || src.x == null) return 0;
+      const dx = tgt.x - src.x, dy = tgt.y - src.y;
+      const dr = Math.sqrt(dx * dx + dy * dy) || 1;
+      const hasReverse = links.some(l =>
+        l.id !== d.id &&
+        (l.source.id || l.source) === (tgt.id || tgt) &&
+        (l.target.id || l.target) === (src.id || src)
+      );
+      const cs = hasReverse ? dr * 0.35 : dr * 0.08;
+      return (src.x + tgt.x) / 2 - dy * cs / dr;
+    }).attr('y', d => {
+      const src = d.source, tgt = d.target;
+      if (!src || !tgt || src.x == null) return 0;
+      const dx = tgt.x - src.x, dy = tgt.y - src.y;
+      const dr = Math.sqrt(dx * dx + dy * dy) || 1;
+      const hasReverse = links.some(l =>
+        l.id !== d.id &&
+        (l.source.id || l.source) === (tgt.id || tgt) &&
+        (l.target.id || l.target) === (src.id || src)
+      );
+      const cs = hasReverse ? dr * 0.35 : dr * 0.08;
+      return (src.y + tgt.y) / 2 + dx * cs / dr - 6;
+    }).text(d => d.label);
+
+    nodeMerge.attr('transform', d => `translate(${d.x ?? 0},${d.y ?? 0})`);
+  });
+}
+
+// ─── Drag ─────────────────────────────────────────────────────────
+function dragStart(event, d) {
+  if (!event.active) simulation.alphaTarget(0.3).restart();
+  d.fx = d.x; d.fy = d.y;
+}
+function dragged(event, d) { d.fx = event.x; d.fy = event.y; }
+function dragEnd(event, d) {
+  if (!event.active) simulation.alphaTarget(0);
+  d.fx = null; d.fy = null;
+}
+
+// ─── Selection / Panel ─────────────────────────────────────────────
+function selectNode(d) {
+  selectedId = d.id;
+  render();
+
+  const panel = document.getElementById('panel');
+  const inner = document.getElementById('panel-inner');
+  panel.classList.add('open');
+
+  const giLabels = { gi: 'Gi', nogi: 'No-Gi' };
+  const tagHtml = d.tags.map(t => `<span class="tag-badge">${giLabels[t] || t}</span>`).join('');
+  const videoHtml = d.videos.length
+    ? d.videos.map(v => `<a class="video-link" href="${v.url}" target="_blank" rel="noopener">
+        <div class="video-icon">▶</div>
+        <div class="video-title">${v.title}</div>
+      </a>`).join('')
+    : '<div class="notes-text" style="opacity:0.5">No links added yet</div>';
+
+  inner.innerHTML = `
+    <button class="panel-close" onclick="closePanel()">✕</button>
+    <div class="panel-type">Position</div>
+    <div class="panel-title">${d.label}</div>
+    <div class="tag-badges">${tagHtml}</div>
+    ${d.notes ? `
+    <div class="panel-section">
+      <div class="section-label">Notes</div>
+      <div class="notes-text">${d.notes}</div>
+    </div>` : ''}
+    <div class="panel-section">
+      <div class="section-label">Reference Links</div>
+      ${videoHtml}
+    </div>
+  `;
+}
+
+function selectEdge(d) {
+  selectedId = d.id;
+  render();
+
+  const panel = document.getElementById('panel');
+  const inner = document.getElementById('panel-inner');
+  panel.classList.add('open');
+
+  const statusLabels = { favourite: '★ Favourite', evolving: '↑ Evolving', exploring: '○ Exploring' };
+  const giLabels = { gi: 'Gi', nogi: 'No-Gi' };
+  const tagHtml = d.tags.map(t => `<span class="tag-badge">${giLabels[t] || t}</span>`).join('');
+  const videoHtml = d.videos.length
+    ? d.videos.map(v => `<a class="video-link" href="${v.url}" target="_blank" rel="noopener">
+        <div class="video-icon">▶</div>
+        <div class="video-title">${v.title}</div>
+      </a>`).join('')
+    : '<div class="notes-text" style="opacity:0.5">No links added yet</div>';
+
+  const fromNode = RAW.nodes.find(n => n.id === d.from);
+  const toNode = RAW.nodes.find(n => n.id === d.to);
+
+  inner.innerHTML = `
+    <button class="panel-close" onclick="closePanel()">✕</button>
+    <div class="panel-type">Transition</div>
+    <div class="panel-title">${d.label}</div>
+    <div class="from-to">
+      <span class="from-to-node">${fromNode?.label || d.from}</span>
+      <span class="arrow-icon">→</span>
+      <span class="from-to-node">${toNode?.label || d.to}</span>
+    </div>
+    <div style="margin-bottom:14px">
+      <span class="status-badge ${d.status}">${statusLabels[d.status]}</span>
+    </div>
+    <div class="tag-badges">${tagHtml}</div>
+    ${d.notes ? `
+    <div class="panel-section">
+      <div class="section-label">Notes</div>
+      <div class="notes-text">${d.notes}</div>
+    </div>` : ''}
+    <div class="panel-section">
+      <div class="section-label">Reference Links</div>
+      ${videoHtml}
+    </div>
+  `;
+}
+
+function closePanel() {
+  document.getElementById('panel').classList.remove('open');
+  selectedId = null;
+  render();
+}
+
+svg.on('click', () => closePanel());
+
+// ─── Filters ──────────────────────────────────────────────────────
+document.querySelectorAll('[data-gi]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-gi]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filterGi = btn.dataset.gi;
+    render();
+  });
+});
+
+document.querySelectorAll('[data-status]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-status]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filterStatus = btn.dataset.status;
+    render();
+  });
+});
+
+// ─── Resize ───────────────────────────────────────────────────────
+window.addEventListener('resize', () => {
+  width = container.clientWidth;
+  height = container.clientHeight;
+  simulation.force('center', d3.forceCenter(width / 2, height / 2));
+  simulation.alpha(0.1).restart();
+});
+
+// ─── Init ─────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
