@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Personal Personal BJJ Game Graph — Product Specification</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #e8ecf0;
+    --mid: #9aa8ba;
+    --muted: #6b7a90;
+    --rule: #2a3140;
+    --bg: #0d0f12;
+    --surface: #161a20;
+    --surface2: #1e242d;
+    --code-bg: #1e242d;
+    --accent: #e8a020;
+    --tag-bg: rgba(232, 160, 32, 0.12);
+    --tag-text: #e8a020;
+    --fav: #22c55e;
+    --evo: #f59e0b;
+    --exp: #ef4444;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'IBM Plex Serif', Georgia, serif;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--ink);
+    background: var(--bg);
+    padding: 0;
+  }
+
+  .page {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 3rem 2.5rem 6rem;
+  }
+
+  /* ── Cover ── */
+  .cover {
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 2rem;
+    margin-bottom: 3rem;
+  }
+
+  .cover h1 {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 2.6rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    line-height: 1.1;
+    margin-bottom: 0.4rem;
+  }
+
+  .cover .subtitle {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 1rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 1.5rem;
+  }
+
+  .cover p {
+    font-size: 1rem;
+    color: var(--mid);
+    margin-bottom: 1.2rem;
+    max-width: 600px;
+  }
+
+  .meta-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.2rem 1rem;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.875rem;
+    margin-top: 1.5rem;
+  }
+
+  .meta-grid .label { color: var(--muted); }
+  .meta-grid .value { color: var(--ink); font-weight: 500; }
+
+  /* ── TOC ── */
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 1.5rem 2rem;
+    margin-bottom: 3rem;
+  }
+
+  .toc h2 {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 1rem;
+  }
+
+  .toc ol {
+    list-style: none;
+    counter-reset: toc;
+  }
+
+  .toc li {
+    counter-increment: toc;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.9rem;
+    padding: 0.25rem 0;
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    gap: 0.75rem;
+    align-items: baseline;
+  }
+
+  .toc li:last-child { border-bottom: none; }
+
+  .toc li::before {
+    content: counter(toc, decimal-leading-zero);
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-family: 'IBM Plex Mono', monospace;
+    flex-shrink: 0;
+  }
+
+  .toc a { color: var(--ink); text-decoration: none; }
+  .toc a:hover { color: var(--accent); }
+
+  /* ── Sections ── */
+  .section {
+    margin-bottom: 4rem;
+    padding-top: 1rem;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1.5px solid var(--ink);
+  }
+
+  .section-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+
+  h2.section-title {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 1.35rem;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  h3 {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--ink);
+    margin-top: 2rem;
+    margin-bottom: 0.5rem;
+  }
+
+  h4 {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  p { margin-bottom: 1rem; color: var(--mid); }
+
+  strong { color: var(--ink); font-weight: 600; }
+
+  /* ── Decision blocks ── */
+  .decision {
+    border-left: 3px solid var(--rule);
+    padding: 0.5rem 0 0.5rem 1.25rem;
+    margin: 1.25rem 0;
+  }
+
+  .decision .decision-title {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--ink);
+    margin-bottom: 0.3rem;
+  }
+
+  .decision p { margin: 0; font-size: 0.9rem; }
+
+  /* ── Tables ── */
+  .table-wrap { overflow-x: auto; margin: 1rem 0 1.5rem; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.85rem;
+  }
+
+  thead th {
+    background: var(--surface2);
+    color: white;
+    font-weight: 500;
+    text-align: left;
+    padding: 0.55rem 0.85rem;
+    font-size: 0.8rem;
+    letter-spacing: 0.02em;
+  }
+
+  tbody tr:nth-child(even) { background: var(--surface); }
+  tbody tr:nth-child(odd) { background: var(--code-bg); }
+
+  td {
+    padding: 0.5rem 0.85rem;
+    vertical-align: top;
+    color: var(--mid);
+    border-bottom: 1px solid var(--rule);
+    line-height: 1.5;
+  }
+
+  td code, th code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    background: var(--surface2);
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
+  }
+
+  /* ── Code blocks ── */
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 1.25rem 1.5rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    overflow-x: auto;
+    margin: 1rem 0 1.5rem;
+    color: var(--ink);
+    white-space: pre;
+  }
+
+  /* ── Scenarios ── */
+  .scenario-block {
+    margin: 1rem 0 1.5rem;
+  }
+
+  .scenario {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+  }
+
+  .scenario-title {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: white;
+    background: var(--surface2);
+    padding: 0.4rem 0.85rem;
+    letter-spacing: 0.02em;
+  }
+
+  .scenario pre {
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    background: var(--surface2);
+    font-size: 0.78rem;
+    padding: 0.85rem 1.25rem;
+  }
+
+  /* ── Tags / badges ── */
+  .badge {
+    display: inline-block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    padding: 0.15em 0.5em;
+    border-radius: 3px;
+    background: var(--tag-bg);
+    color: var(--tag-text);
+  }
+
+  .badge.fav { background: rgba(34,197,94,0.12); color: var(--fav); }
+  .badge.evo { background: rgba(245,158,11,0.12); color: var(--evo); }
+  .badge.exp { background: rgba(239,68,68,0.12); color: var(--exp); }
+
+  /* ── Status row colours ── */
+  .row-fav td:first-child { border-left: 3px solid var(--fav); }
+  .row-evo td:first-child { border-left: 3px solid var(--evo); }
+  .row-exp td:first-child { border-left: 3px solid var(--exp); }
+
+  /* ── Lists ── */
+  ul.spec-list {
+    list-style: none;
+    margin: 0.5rem 0 1rem;
+    padding: 0;
+  }
+
+  ul.spec-list li {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.9rem;
+    color: var(--mid);
+    padding: 0.3rem 0 0.3rem 1.25rem;
+    position: relative;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  ul.spec-list li:last-child { border-bottom: none; }
+
+  ul.spec-list li::before {
+    content: '—';
+    position: absolute;
+    left: 0;
+    color: var(--muted);
+    font-size: 0.75rem;
+  }
+
+  /* ── Footer ── */
+  .doc-footer {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--rule);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  hr.section-rule {
+    border: none;
+    border-top: 1px solid var(--rule);
+    margin: 2.5rem 0;
+  }
+
+  @media print {
+    body { background: var(--bg); }
+    .page { padding: 1.5rem; }
+    .scenario { break-inside: avoid; }
+    .section { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Cover -->
+  <div class="cover">
+    <div class="subtitle">Product Specification — Version 1.0</div>
+    <h1>Personal BJJ Game Graph</h1>
+    <p>Brazilian Jiu-Jitsu practitioners hold a large number of positions, transitions, and opponent reactions in their head simultaneously. Knowing what to do is only part of the challenge — understanding which parts of your game are reliable, which are developing, and which are only just being explored requires a different kind of awareness.</p>
+    <p>This tool is a personal development aid: a visual graph that maps a practitioner's own game, so they can see it, navigate it, and build it deliberately.</p>
+    <p>The graph is made up of positions (nodes) — such as Standing or De La Riva — connected by transitions (connectors between nodes), such as "pull guard, foot on hip" or "they step wide". Each connector carries a status: favourite, working on, or exploring.</p>
+    <p>Built to support the author's own BJJ practice, and to demonstrate that a domain-literate non-engineer can make rigorous architectural decisions and deliver a working product using AI as an engineering tool.</p>
+    <div class="meta-grid">
+      <span class="label">Author</span><span class="value">Kane Hellewell</span>
+      <span class="label">Co-authored with</span><span class="value">Claude (Anthropic)</span>
+      <span class="label">Repository</span><span class="value">github.com/KaneH1pt/bjj-game-plan-builder</span>
+      <span class="label">Status</span><span class="value">MVP complete. Full build in specification.</span>
+    </div>
+  </div>
+
+  <!-- TOC -->
+  <div class="toc">
+    <h2>Contents</h2>
+    <ol>
+      <li>
+        <a href="#s1">Setup &amp; Design Decisions</a>
+        <ul style="list-style:none;margin:0.3rem 0 0.3rem 1.5rem;padding:0;">
+          <li style="font-size:0.8rem;color:var(--muted);padding:0.15rem 0;">Design Decisions</li>
+          <li style="font-size:0.8rem;color:var(--muted);padding:0.15rem 0;">Pre-Functional Task List</li>
+          <li style="font-size:0.8rem;color:var(--muted);padding:0.15rem 0;">URL Structure</li>
+          <li style="font-size:0.8rem;color:var(--muted);padding:0.15rem 0;">Agent Pipeline</li>
+          <li style="font-size:0.8rem;color:var(--muted);padding:0.15rem 0;">Environments</li>
+          <li style="font-size:0.8rem;color:var(--muted);padding:0.15rem 0;">Roles and Responsibilities</li>
+        </ul>
+      </li>
+      <li><a href="#s2">Feature: Authentication</a></li>
+      <li><a href="#s3">Feature: Nodes</a></li>
+      <li><a href="#s4">Feature: Connectors</a></li>
+      <li><a href="#security">Security</a></li>
+      <li><a href="#milestones">Future Milestones</a></li>
+      <li><a href="#costs">Appendix A — Costs</a></li>
+      <li><a href="#glossary">Appendix B — Glossary</a></li>
+      <li><a href="#mvp">Appendix C — MVP Reference</a></li>
+    </ol>
+  </div>
+
+  <!-- Section 1 -->
+  <div class="section" id="s1">
+    <div class="section-header">
+      <span class="section-num">01</span>
+      <h2 class="section-title">Setup &amp; Design Decisions</h2>
+    </div>
+    <p>This section captures the foundational decisions already made and the pre-functional work a developer must complete before any feature development begins. Each decision includes the reasoning — this is a portfolio document as much as a technical specification.</p>
+
+    <h3>Design Decisions</h3>
+
+    <div class="decision">
+      <div class="decision-title">Why a directed graph, not a tree</div>
+      <p>BJJ positions loop back, the same position is reachable from multiple starting points, and opponent reactions branch the path. A tree implies one direction. A graph is therefore the correct model.</p>
+    </div>
+
+    <div class="decision">
+      <div class="decision-title">Why PostgreSQL via Supabase</div>
+      <p>Hosted, managed database. Free tier covers this project indefinitely. Supabase provides authentication (verifying who a user is) and authorisation (controlling what they can access) out of the box, removing the need to manually build either mechanism. Row Level Security is built in. The visual table editor lets the author inspect and understand their own data directly.</p>
+    </div>
+
+    <div class="decision">
+      <div class="decision-title">Why FastAPI</div>
+      <p>A thin Python API layer between the frontend and database. Business logic — such as preventing deletion of a node that still has connectors attached — needs a trusted layer to enforce it. Python is readable and AI-generatable. Maps naturally to data engineering mental models the author already holds from healthcare interoperability and data transformation work.</p>
+    </div>
+
+    <div class="decision">
+      <div class="decision-title">Why React</div>
+      <p>The application has significant interactive state — node selection, filter toggles, panel open/close, in-browser editing. Plain HTML is unmaintainable at this level of interactivity. React is the industry standard for this class of problem.</p>
+    </div>
+
+    <div class="decision">
+      <div class="decision-title">Why Vercel + Railway</div>
+      <p>Both connect directly to GitHub and auto-deploy on commit. A developer pushes a change, it is live within 60 seconds. Zero manual deployment steps.</p>
+    </div>
+
+    <div class="decision">
+      <div class="decision-title">Why BDD for this specification</div>
+      <p>Scenarios written in Behaviour Driven Development format are readable by a non-technical stakeholder, a developer, and a tester equally. They drive development, testing, and documentation from a single source. Each scenario is a thin vertical slice — the smallest demonstrable unit of working software running through all layers.</p>
+    </div>
+
+    <div class="decision">
+      <div class="decision-title">On the MVP</div>
+      <p>The working MVP (<code>bjj-game-plan-builder.html</code>) is a single file with data hardcoded as JSON. It proves the concept works and is the visual and behavioural reference for all frontend development.</p>
+    </div>
+
+    <h3>Pre-Functional Task List</h3>
+    <p>These tasks must be completed before any agent work begins. Split into two groups — tasks the product owner must do manually, and tasks the dev agent handles.</p>
+
+    <h4>Product Owner — Manual Setup</h4>
+    <p>These require account creation or credential management that agents cannot do.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Task</th><th>Why</th><th>Done when</th></tr></thead>
+        <tbody>
+          <tr><td>Create Supabase test project</td><td>Separate database for automated testing — agents must never touch production data</td><td>Project live, connection string available</td></tr>
+          <tr><td>Create Supabase production project</td><td>Live database for real users. Provides auth mechanism — Feature: Authentication builds on top, it does not create auth from scratch.</td><td>Project live, connection string available, auth config ready</td></tr>
+          <tr><td>Create Railway test deployment</td><td>Backend for test environment</td><td>Deployment live, URL available</td></tr>
+          <tr><td>Create Railway production deployment</td><td>Backend for production environment</td><td>Deployment live, URL available</td></tr>
+          <tr><td>Create Vercel deployment</td><td>Frontend hosting, auto-deploys from GitHub main</td><td>Blank app loads at Vercel URL</td></tr>
+          <tr><td>Add all credentials to GitHub Secrets</td><td>Agents consume secrets — they never create them</td><td>All secrets present: <code>SUPABASE_URL_TEST</code>, <code>SUPABASE_ANON_KEY_TEST</code>, <code>SUPABASE_URL_PROD</code>, <code>SUPABASE_ANON_KEY_PROD</code>, <code>CAPTCHA_TEST_KEY</code>, <code>CAPTCHA_SITE_KEY_PROD</code></td></tr>
+          <tr><td>Enable Dependabot on GitHub</td><td>Automatic alerts for vulnerable dependencies</td><td>Dependabot enabled in GitHub settings</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4>Dev Agent — Scaffolding Tasks</h4>
+    <p>Triggered by a GitHub Issue labelled <code>setup</code> before any feature issues are raised.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Task</th><th>Why</th><th>Done when</th></tr></thead>
+        <tbody>
+          <tr><td>Initialise FastAPI project</td><td>Backend scaffolding</td><td>App runs locally, returns <code>200</code> on <code>GET /health</code></td></tr>
+          <tr><td>Deploy FastAPI to Railway (test + prod)</td><td>Backend accessible at real URLs</td><td><code>GET /health</code> returns <code>200</code> at both Railway URLs</td></tr>
+          <tr><td>Initialise React project</td><td>Frontend scaffolding</td><td>App runs locally, blank page with no errors</td></tr>
+          <tr><td>Deploy React to Vercel</td><td>Frontend accessible at a real URL</td><td>Blank app loads at Vercel URL</td></tr>
+          <tr><td>Configure rate limiting on Railway</td><td>Protect the API from abuse</td><td>60 req/user/min enforced in prod; relaxed in test</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>URL Structure</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Route</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>/login</code></td><td>Login page</td></tr>
+          <tr><td><code>/signup</code></td><td>Create account page</td></tr>
+          <tr><td><code>/home</code></td><td>Main graph view — requires authentication</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Agent Pipeline</h3>
+    <p>This project is built using an AI agent pipeline. Agents are configured as GitHub Actions workflows living in the repository. The product owner (Kane Hellewell, author of this document) owns the specification — agents own implementation.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Agent</th><th>Trigger</th><th>Responsibility</th></tr></thead>
+        <tbody>
+          <tr><td>Dev Agent</td><td>GitHub Issue labelled <code>build</code></td><td>Reads the spec, writes code for the specified feature, raises a pull request</td></tr>
+          <tr><td>Test Agent</td><td>Pull request opened</td><td>Runs BDD scenarios as automated tests, blocks merge if any scenario fails</td></tr>
+          <tr><td>Review Agent</td><td>Test agent passes</td><td>Produces a plain English compliance report against the specification — only fires on code that has passed all BDD scenarios</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Environments</h3>
+    <p>Two environments. All agent activity happens in test. Only a product owner merge triggers production.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th></th><th>Test</th><th>Production</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Trigger</strong></td><td>Pull request opened</td><td>Merge to main branch</td></tr>
+          <tr><td><strong>Database</strong></td><td>Supabase test project</td><td>Supabase production project</td></tr>
+          <tr><td><strong>CAPTCHA</strong></td><td>Bypassed using hCaptcha/Turnstile test key</td><td>Enforced</td></tr>
+          <tr><td><strong>Rate limiting</strong></td><td>Relaxed — agents must be able to run full scenario suites without hitting limits</td><td>Full — 60 req/user/min, 5 signups/IP/hour</td></tr>
+          <tr><td><strong>URL</strong></td><td>Railway test deployment</td><td>Railway production deployment</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4>GitHub Secrets — naming convention</h4>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Secret</th><th>Test</th><th>Production</th></tr></thead>
+        <tbody>
+          <tr><td>Supabase URL</td><td><code>SUPABASE_URL_TEST</code></td><td><code>SUPABASE_URL_PROD</code></td></tr>
+          <tr><td>Supabase anon key</td><td><code>SUPABASE_ANON_KEY_TEST</code></td><td><code>SUPABASE_ANON_KEY_PROD</code></td></tr>
+          <tr><td>CAPTCHA test key</td><td><code>CAPTCHA_TEST_KEY</code></td><td><code>CAPTCHA_SITE_KEY_PROD</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <ul class="spec-list">
+      <li>Both Supabase projects, both Railway deployments, and all GitHub Secrets are created manually by the product owner before any agent work begins — agents consume credentials, they never create infrastructure</li>
+      <li>Test and production databases are completely separate — automated tests never touch production data</li>
+      <li>No agent has access to production secrets</li>
+      <li>Production is only reachable via a merge to main, which only the product owner can perform</li>
+      <li>If the test environment is unavailable, the test agent flags this explicitly and blocks merge — it does not skip scenarios</li>
+    </ul>
+
+    <h3>Roles and Responsibilities</h3>
+
+    <ul class="spec-list">
+      <li><strong>Dev Agent:</strong> Reads the specification and writes code to implement the specified feature. Raises a pull request when complete. Does not run tests, does not merge its own pull request, does not modify the specification. If it cannot implement something as specified, it leaves a comment on the pull request explaining why — it does not change the spec to fit what it could build.</li>
+      <li><strong>Test Agent:</strong> Runs the BDD scenarios against the pull request. Reports which scenarios pass and which fail, with the scenario ID (e.g. AUTH-03). Does not fix code. Does not modify scenarios. Blocks merge if any scenario fails. If a scenario cannot be run, it flags this explicitly rather than skipping silently.</li>
+      <li><strong>Review Agent:</strong> Reads the pull request and the specification. Produces a plain English report stating whether the implementation matches the spec. Flags anything in the code that contradicts a requirement, even if tests pass. Does not fix code, does not approve or merge. References requirements by their identifier (e.g. SEC-04, NOD-03) in its report.</li>
+      <li><strong>Product Owner (Kane Hellewell):</strong> Only person who can merge a pull request. Owns the specification — any change to requirements must come from the product owner, not an agent. Reviews the test report and review report before merging. Can reject a pull request and reopen the issue for the dev agent to rework.</li>
+    </ul>
+
+    <p><strong>Key principle — incremental, feature by feature:</strong> Agents are triggered one feature at a time, following the specification order: Authentication → Nodes → Connectors. Each feature is built, tested, and reviewed before the next begins.</p>
+    <p>The order within each feature is fixed:</p>
+    <ul class="spec-list">
+      <li>Product owner raises a GitHub Issue labelled <code>build</code> for the feature</li>
+      <li>Dev Agent writes the code and raises a pull request</li>
+      <li>Test Agent runs — if any scenario fails, it blocks the pull request and the dev agent must rework</li>
+      <li>Review Agent fires only after all tests pass — it reviews code that works, not broken code</li>
+      <li>Product owner reads both reports and merges if satisfied, or rejects and reopens the issue</li>
+    </ul>
+    <p>This keeps every increment independently reviewable, ensures a clean rollback point after each feature, and prevents a partially-built state from creating untraceable failures.</p>
+
+    <p><strong>Cost safeguarding:</strong> Agents only trigger on issues and pull requests the product owner has explicitly labelled. One agent run per feature. A hard token budget is set in each agent prompt. Supabase and Railway both hard-stop at free tier limits rather than charging overages.</p>
+
+    <p><strong>Security:</strong> <code>GITHUB_TOKEN</code> scoped to the repository, expires at end of each run. All credentials stored as GitHub Secrets — encrypted, never visible in code. Only the product owner (Kane Hellewell) can merge.</p>
+  </div>
+
+  <!-- Section 2 -->
+  <div class="section" id="s2">
+    <div class="section-header">
+      <span class="section-num">02</span>
+      <h2 class="section-title">Feature: Authentication</h2>
+    </div>
+    <p>A user must be able to create an account and log in before accessing any part of the application. All data is private by default — a user can only see and edit their own game graph. Login and create account are separate pages, each doing one thing.</p>
+
+    <h4>Scenarios</h4>
+    <div class="scenario-block">
+
+      <div class="scenario">
+        <div class="scenario-title">AUTH-01 — New user creates an account</div>
+        <pre>Given I am on the /signup page
+When I enter a username into the username field
+And I enter a password into the password field
+And I click "Create account"
+Then I am redirected to /home
+And I see a logout button in the top right corner
+And I see the message "Click 'Add Position' to add your first position"</pre>
+      </div>
+
+      <div class="scenario">
+        <div class="scenario-title">AUTH-02 — User tries to create an account with an invalid username</div>
+        <pre>Given I am on the /signup page
+When I enter a username containing invalid characters (e.g. "kane hellewell!")
+And I enter a valid password and click "Create account"
+Then I see "Username must be 3–30 characters and contain only letters, numbers, underscores, or hyphens"
+And no account is created and the form stays open</pre>
+      </div>
+
+      <div class="scenario">
+        <div class="scenario-title">AUTH-03 — User tries to create an account with a weak password</div>
+        <pre>Given I am on the /signup page
+When I enter a valid username
+And I enter a password that does not meet the requirements (e.g. "password")
+And I click "Create account"
+Then I see "Password must be at least 10 characters and include an uppercase letter, a lowercase letter, and a number"
+And no account is created and the form stays open</pre>
+      </div>
+
+      <div class="scenario">
+        <div class="scenario-title">AUTH-04 — User tries to create an account with a username already taken</div>
+        <pre>Given I am on the /signup page
+When I enter a username that is already registered
+And I enter a valid password and click "Create account"
+Then I see "That username is already taken"
+And no account is created and the form stays open</pre>
+      </div>
+
+      <div class="scenario">
+        <div class="scenario-title">AUTH-05 — Returning user logs in</div>
+        <pre>Note: test with a user who has an existing game graph.
+Also test with a new user who has no graph — empty state message should appear.
+
+Given I am on the /login page
+When I enter my username and password and click "Log in"
+Then I am redirected to /home
+And I see a logout button in the top right corner
+And my current game graph is visible, including any previously saved nodes and connectors</pre>
+      </div>
+
+      <div class="scenario">
+        <div class="scenario-title">AUTH-06 — User enters incorrect credentials</div>
+        <pre>Given I am on the /login page
+When I enter incorrect credentials and click "Log in"
+Then I see "Incorrect username or password"
+And I remain on the /login page</pre>
+      </div>
+
+      <div class="scenario">
+        <div class="scenario-title">AUTH-07 — Unauthenticated user tries to access the app</div>
+        <pre>Given I am not logged in
+When I navigate to /home
+Then I am redirected to /login</pre>
+      </div>
+
+      <div class="scenario">
+        <div class="scenario-title">AUTH-08 — User logs out successfully</div>
+        <pre>Given I am logged in and on /home
+When I click the logout button in the top right corner
+Then I am redirected to /login
+And I see "You have been logged out successfully"
+And I am able to log in again without reloading the page</pre>
+      </div>
+
+      <div class="scenario">
+        <div class="scenario-title">AUTH-09 — Logout fails</div>
+        <pre>Given I am logged in and on /home
+When I click the logout button and the request fails
+Then I see "Logout failed. Please try again."
+And the error remains visible until dismissed
+And I remain on /home</pre>
+      </div>
+
+      <div class="scenario">
+        <div class="scenario-title">AUTH-10 — Idle session expires</div>
+        <pre>Given I am logged in
+When I have been inactive for 30 minutes
+Then I am automatically logged out
+And I am redirected to /login
+And I see "Your session has expired. Please log in again."</pre>
+      </div>
+
+    </div>
+
+    <h4>Technical Notes</h4>
+    <ul class="spec-list">
+      <li><strong>Authentication provider:</strong> Supabase Auth. Username and password only.</li>
+      <li><strong>Signup form fields:</strong> The signup form contains two fields only — username and password. No email field. No confirm password field. Token-based auth via Google is a future consideration.</li>
+      <li><strong>Username validation:</strong> 3–30 characters. Letters, numbers, underscores, and hyphens only — no spaces or other special characters. Case insensitive. Must be unique.</li>
+      <li><strong>Password validation:</strong> Minimum 10 characters. Must contain at least one uppercase letter, one lowercase letter, and one number. No maximum length — password managers must be supported. Never stored in plain text — hashed by Supabase before reaching the database.</li>
+      <li><strong>Token handling:</strong> On login, Supabase returns a JWT. The frontend includes it in every API call header. The backend validates it and extracts the user ID to scope all data queries.</li>
+      <li><strong>Token storage:</strong> Memory or secure httpOnly cookie. Never localStorage.</li>
+      <li><strong>Idle timeout:</strong> 30 minutes of inactivity triggers automatic logout and redirect to /login.</li>
+      <li><strong>Row Level Security:</strong> Enabled on all tables. Policies enforce that a user can only read and write their own rows — at the database layer, not just the application layer.</li>
+      <li><strong>Error messages:</strong> All auth errors return "Incorrect username or password" regardless of which field is wrong. This prevents an attacker using the error to determine whether a username exists.</li>
+    </ul>
+  </div>
+
+  <!-- Section 3 -->
+  <div class="section" id="s3">
+    <div class="section-header">
+      <span class="section-num">03</span>
+      <h2 class="section-title">Feature: Nodes</h2>
+    </div>
+    <p>A logged-in user can create a position in their game graph. A position (node) represents a state in a match — Standing, De La Riva, Side Control Top. A node can exist without connectors — it renders with a dashed border to indicate it is unconnected.</p>
+
+    <h4>Scenarios</h4>
+    <div class="scenario-block">
+
+      <div class="scenario">
+        <div class="scenario-title">NOD-01 — User sees empty graph on first login</div>
+        <pre>Given I have just created an account
+When I am redirected to /home
+Then I see a blank graph
+And I see "Click 'Add Position' to add your first position"</pre>
+      </div>
+
+      <div class="scenario">
+        <div class="scenario-title">NOD-02 — Graph loads existing nodes on login</div>
+        <pre>Given I am a returning user with nodes in my game graph
+When I log in and am redirected to /home
+Then I see a spinner while loading
+And the graph appears all at once when ready
+And the spinner disappears</pre>
+      </div>
+
+      <div class="scenario">
+        <div class="scenario-title">NOD-03 — User creates a node</div>
+        <pre>Given I am logged in and on /home
+When I click "Add Position"
+And I enter the label "De La Riva"
+And I add the note "Left hook behind their lead leg"
+And I select the tag "Gi"
+And I click "Save"
+Then I see "Position created: De La Riva"
+And the form clears and is ready for another entry
+And "De La Riva" appears on the graph immediately
+And the node is visible after navigating away and returning</pre>
+      </div>
+
+      <div class="scenario">
+        <div class="scenario-title">NOD-04 — User creates a node with no tags</div>
+        <pre>When I click "Add Position", enter "Standing", click "Save"
+Then I see "Position created: Standing"
+And the node appears with no tags</pre>
+      </div>
+
+      <div class="scenario">
+        <div class="scenario-title">NOD-05 — User tries to create a node with no label</div>
+        <pre>When I leave the label empty and click "Save"
+Then I see "Label is required"
+And no node is created and the form stays open</pre>
+      </div>
+
+      <div class="scenario">
+        <div class="scenario-title">NOD-06 — User clicks a node to view its details</div>
+        <pre>When I click a node on the graph
+Then a details panel opens on the right
+And the panel shows the node label, notes and tags</pre>
+      </div>
+
+      <div class="scenario">
+        <div class="scenario-title">NOD-07 — User closes the details panel</div>
+        <pre>Given the details panel is open
+When I click anywhere outside the panel
+Then the panel closes</pre>
+      </div>
+
+      <div class="scenario">
+        <div class="scenario-title">NOD-08 — User opens a different node while panel is open</div>
+        <pre>Given the panel shows "De La Riva"
+When I click "Standing"
+Then the panel updates to show "Standing" details</pre>
+      </div>
+
+      <div class="scenario">
+        <div class="scenario-title">NOD-09 — Floating node has a dashed border</div>
+        <pre>Given I have created a node with no connectors attached
+Then the node appears with a dashed border
+And connected nodes are displayed with a solid border</pre>
+      </div>
+
+    </div>
+
+    <h4>Technical Notes</h4>
+    <p><strong>Endpoint:</strong> <code>POST /nodes</code></p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Validation</th></tr></thead>
+        <tbody>
+          <tr><td><code>label</code></td><td>text</td><td>Yes</td><td>Non-empty. Max 100 characters</td></tr>
+          <tr><td><code>notes</code></td><td>text</td><td>No</td><td>Max 5,000 characters. Defaults to empty string</td></tr>
+          <tr><td><code>tags</code></td><td>array</td><td>No</td><td>Valid values: <code>gi</code>, <code>nogi</code>. Defaults to empty array</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <ul class="spec-list">
+      <li><strong>Graph rendering:</strong> Frontend shows a spinner while <code>GET /graph</code> loads. The D3 force simulation runs silently until settled. Graph appears all at once — no visible animation of nodes moving into position.</li>
+      <li><strong>Node spacing:</strong> Minimum repulsion of 80px between node centres.</li>
+      <li><strong>Post-save:</strong> Confirmation message displayed, form clears and stays open, new node appears immediately without a page reload.</li>
+      <li><strong>Details panel:</strong> One component with two states — node and connector. Closes on click outside. Updates if a different item is clicked while open.</li>
+    </ul>
+
+    <h4>Data Model</h4>
+    <pre>tags (
+  id     text primary key,  -- 'gi', 'nogi'
+  label  text               -- 'Gi', 'No-Gi'
+)
+
+nodes (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid references auth.users(id),
+  label       text not null check (char_length(label) &lt;= 100),
+  notes       text default '' check (char_length(notes) &lt;= 5000),
+  created_at  timestamptz default now(),
+  updated_at  timestamptz default now()
+)
+
+node_tags (
+  node_id  uuid references nodes(id),
+  tag_id   text references tags(id),
+  primary key (node_id, tag_id)
+)</pre>
+  </div>
+
+  <!-- Section 4 -->
+  <div class="section" id="s4">
+    <div class="section-header">
+      <span class="section-num">04</span>
+      <h2 class="section-title">Feature: Connectors</h2>
+    </div>
+    <p>A logged-in user can create a connector between two existing positions. A connector represents what happens between positions — triggered by either the user's action or the opponent's reaction. Each connector has a status that determines its colour on the graph.</p>
+
+    <h4>Scenarios</h4>
+    <div class="scenario-block">
+
+      <div class="scenario">
+        <div class="scenario-title">CON-01 — User creates a favourite connector</div>
+        <pre>Given my game graph has at least two nodes
+When I click "Add Connector", select "Standing" → "De La Riva"
+And I enter "Pull guard, foot on hip", select status "Favourite", click "Save"
+Then I see "Transition created: Pull guard, foot on hip"
+And a green (#22c55e) connector appears between the nodes immediately</pre>
+      </div>
+
+      <div class="scenario">
+        <div class="scenario-title">CON-02 — User creates a working on connector</div>
+        <pre>Same as above but status "Working On"
+Then an amber (#f59e0b) connector appears immediately</pre>
+      </div>
+
+      <div class="scenario">
+        <div class="scenario-title">CON-03 — User creates an exploring connector</div>
+        <pre>Same as above but status "Exploring"
+Then a red (#ef4444) connector appears immediately</pre>
+      </div>
+
+      <div class="scenario">
+        <div class="scenario-title">CON-04 — User tries to create a connector with no label</div>
+        <pre>When I leave the label empty and click "Save"
+Then I see "Label is required"
+And no connector is created and the form stays open</pre>
+      </div>
+
+      <div class="scenario">
+        <div class="scenario-title">CON-05 — User tries to connect a node to itself</div>
+        <pre>When I select the same position as both start and destination
+And I click "Save"
+Then I see "Start and destination must be different"
+And no connector is created</pre>
+      </div>
+
+      <div class="scenario">
+        <div class="scenario-title">CON-06 — User clicks a connector to view its details</div>
+        <pre>When I click a connector on the graph
+Then a details panel opens showing label, notes, status and tags
+And the panel closes when I click outside it
+And the panel updates if I click a different connector or node</pre>
+      </div>
+
+    </div>
+
+    <h4>Colour Coding</h4>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Status</th><th>Colour</th><th>Hex</th></tr></thead>
+        <tbody>
+          <tr class="row-fav"><td><span class="badge fav">favourite</span></td><td>Green</td><td><code>#22c55e</code></td></tr>
+          <tr class="row-evo"><td><span class="badge evo">working on</span></td><td>Amber</td><td><code>#f59e0b</code></td></tr>
+          <tr class="row-exp"><td><span class="badge exp">exploring</span></td><td>Red</td><td><code>#ef4444</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4>Technical Notes</h4>
+    <p><strong>Endpoint:</strong> <code>POST /edges</code> (internal API term retained)</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Validation</th></tr></thead>
+        <tbody>
+          <tr><td><code>from_node</code></td><td>uuid</td><td>Yes</td><td>Must reference an existing node owned by the user</td></tr>
+          <tr><td><code>to_node</code></td><td>uuid</td><td>Yes</td><td>Must reference an existing node owned by the user. Cannot equal from_node</td></tr>
+          <tr><td><code>label</code></td><td>text</td><td>Yes</td><td>Non-empty. Max 100 characters</td></tr>
+          <tr><td><code>notes</code></td><td>text</td><td>No</td><td>Max 5,000 characters</td></tr>
+          <tr><td><code>status</code></td><td>text</td><td>Yes</td><td>Exactly one of: <code>favourite</code>, <code>working_on</code>, <code>exploring</code></td></tr>
+          <tr><td><code>tags</code></td><td>array</td><td>No</td><td>Valid values: <code>gi</code>, <code>nogi</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4>Data Model</h4>
+    <pre>edges (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid references auth.users(id),
+  from_node   uuid references nodes(id),
+  to_node     uuid references nodes(id),
+  label       text not null check (char_length(label) &lt;= 100),
+  notes       text default '' check (char_length(notes) &lt;= 5000),
+  status      text not null check (status in ('favourite', 'working_on', 'exploring')),
+  created_at  timestamptz default now(),
+  updated_at  timestamptz default now(),
+  constraint no_self_loop check (from_node != to_node)
+)</pre>
+  </div>
+
+  <!-- Security -->
+  <div class="section" id="security">
+    <div class="section-header">
+      <span class="section-num">05</span>
+      <h2 class="section-title">Security</h2>
+    </div>
+    <p>Security requirements expressed as functional statements — clear, testable rules for a developer or agent. The tooling handles most of the implementation; this section defines what must be true.</p>
+
+    <ul class="spec-list">
+      <li><strong>SEC-01 — HTTPS everywhere:</strong> All traffic is encrypted in transit. Vercel and Railway enforce HTTPS automatically. HTTP requests must be rejected.</li>
+      <li><strong>SEC-02 — Authentication required on all data routes:</strong> Every endpoint except login and signup requires a valid JWT. Unauthenticated requests return <code>401</code>. The backend validates the token on every request — not just on login.</li>
+      <li><strong>SEC-03 — Data ownership at the database layer:</strong> Row Level Security is enabled on all tables. Policies enforce that a user can only read and write rows where <code>user_id</code> matches their authenticated identity — regardless of what the application layer does.</li>
+      <li><strong>SEC-04 — Tokens stored safely:</strong> JWTs stored in memory or a secure httpOnly cookie. Never in localStorage, where they are accessible to JavaScript and vulnerable to cross-site scripting attacks.</li>
+      <li><strong>SEC-05 — CORS locked to the frontend origin:</strong> The backend only accepts requests from the Vercel frontend URL. Requests from any other origin are rejected.</li>
+      <li><strong>SEC-06 — No secrets in code:</strong> All credentials stored as environment variables. Nothing sensitive is hardcoded or committed to the repository.</li>
+      <li><strong>SEC-07 — Nothing sensitive in URLs:</strong> User identifiers, tokens, and data must not appear in URL paths or query strings.</li>
+      <li><strong>SEC-08 — General rate limiting:</strong> 60 requests per authenticated user per minute, enforced at Railway level.</li>
+      <li><strong>SEC-09 — Signup rate limiting by IP:</strong> Maximum 5 account creation attempts per IP address per hour. Prevents automated scripts from exhausting the Supabase free tier. Enforced by Supabase Auth by default — must not be disabled.</li>
+      <li><strong>SEC-10 — CAPTCHA on signup:</strong> hCaptcha or Cloudflare Turnstile (both free, supported natively by Supabase) required on the signup form. Blocks automated account creation entirely.</li>
+      <li><strong>SEC-11 — Input length limits:</strong> Labels capped at 100 characters. Notes capped at 5,000 characters. Oversized payloads are rejected before reaching the database.</li>
+      <li><strong>SEC-12 — Dependency monitoring:</strong> Dependabot enabled on the GitHub repository. Raises a pull request automatically when a dependency has a known vulnerability.</li>
+      <li><strong>SEC-14 — Parameterised queries only:</strong> All database queries use parameterised statements. Raw string interpolation with user-supplied input is forbidden. This applies to every query written by the dev agent — no exceptions. This prevents SQL injection regardless of what input reaches the database layer.</li>
+      <li><strong>SEC-15 — Security logging:</strong> Failed login attempts and invalid access attempts on authenticated routes are logged with a timestamp and IP address. Logging is implemented as middleware in the FastAPI backend and stored in Railway. Logs are retained for 30 days. This is the minimum needed to detect brute force patterns. Personal data is not logged.</li>
+      <li><strong>SEC-16 — No verbose errors in production:</strong> The production environment must never return stack traces, internal error messages, or framework debug output to the client. All unhandled errors return a generic <code>500 Internal Server Error</code> response. Verbose error detail is permitted in the test environment only.</li>
+    </ul>
+
+    <h4>Scenario</h4>
+    <div class="scenario-block">
+      <div class="scenario">
+        <div class="scenario-title">SEC-13 — Bot attempts mass account creation (covers SEC-09, SEC-10)</div>
+        <pre>Given a script attempts to create more than 5 accounts from the same IP within one hour
+When the 6th attempt is made
+Then the request is rejected
+And the form shows "Too many attempts. Please try again later."</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Future Milestones -->
+  <div class="section" id="milestones">
+    <div class="section-header">
+      <span class="section-num">06</span>
+      <h2 class="section-title">Future Milestones</h2>
+    </div>
+    <p>Documented but not detailed. Each follows the same BDD pattern when ready to build.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Milestone</th><th>What it delivers</th></tr></thead>
+        <tbody>
+          <tr><td>Edit &amp; Delete</td><td>Update or remove nodes and connectors in the browser</td></tr>
+          <tr><td>Video links</td><td>Attach YouTube reference links to nodes and connectors</td></tr>
+          <tr><td>Sharing</td><td>Read-only share link — viewable without logging in</td></tr>
+          <tr><td>Forgotten password</td><td>Self-service password reset flow</td></tr>
+          <tr><td>Game Snapshots</td><td>Save a named version of your graph at a point in time — to look back at how your game has developed, or restore a previous version if changes go wrong</td></tr>
+          <tr><td>Automation</td><td>Workflow automation — status change logging, video enrichment, training progression tracking</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Appendix A -->
+  <div class="section" id="costs">
+    <div class="section-header">
+      <span class="section-num">A</span>
+      <h2 class="section-title">Appendix A — Costs</h2>
+    </div>
+    <p><strong>Realistic ongoing cost: £0/month.</strong> This project is built specifically on tools with hard free tier limits — they stop or sleep rather than charge overages.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Service</th><th>Monthly cost</th><th>Free tier limit</th><th>What happens when exceeded</th></tr></thead>
+        <tbody>
+          <tr><td>Supabase</td><td>£0</td><td>500MB storage, 2GB transfer</td><td>Project pauses — no charge</td></tr>
+          <tr><td>Railway</td><td>£0</td><td>$5 free credit/month</td><td>Service sleeps on inactivity</td></tr>
+          <tr><td>Vercel</td><td>£0</td><td>100GB bandwidth</td><td>Deployment pauses — no charge</td></tr>
+          <tr><td>GitHub</td><td>£0</td><td>Public repositories</td><td>Unlimited</td></tr>
+          <tr><td>Claude API (agent build)</td><td>~$3–5 one-off</td><td>$5 free credit on new account</td><td>Pay-as-you-go, charged on successful calls only</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Predictable, zero-surprise billing is itself an architecture decision. Every service here either hard-stops or sleeps rather than scaling charges silently. The one-off agent build cost is covered by the free credit on a new API account. Ongoing running costs at low user volume are genuinely zero.</p>
+  </div>
+
+  <!-- Appendix B -->
+  <div class="section" id="glossary">
+    <div class="section-header">
+      <span class="section-num">B</span>
+      <h2 class="section-title">Appendix B — Glossary</h2>
+    </div>
+    <ul class="spec-list">
+      <li><strong>API (Application Programming Interface):</strong> A contract that defines how two systems communicate. Here, the FastAPI backend exposes an API that the React frontend calls to read and write data.</li>
+      <li><strong>BDD (Behaviour Driven Development):</strong> A specification approach that writes requirements as user behaviours in plain language. Readable by non-technical stakeholders, developers, and testers equally. Each scenario is independently testable.</li>
+      <li><strong>Connector:</strong> A directed line between two nodes representing what happens between positions — triggered by either the user's action or the opponent's reaction. Has a status of favourite, working on, or exploring. Referred to as an "edge" in the database and API layer, where it is a standard graph term.</li>
+      <li><strong>JWT (JSON Web Token):</strong> A standard encoded string used to prove a user's identity to the API without sending credentials on every request. Issued by Supabase on login.</li>
+      <li><strong>Node:</strong> A position in the BJJ game graph. Examples: Standing, De La Riva, Side Control Top.</li>
+      <li><strong>RLS (Row Level Security):</strong> A database feature that enforces data ownership at the database layer. Policies ensure a user can only read and write their own rows regardless of what the application layer does.</li>
+      <li><strong>Status:</strong> A classification on a connector. favourite = reliable, used regularly. working on = actively developing. exploring = attempted but not yet understood.</li>
+      <li><strong>Vertical slice:</strong> The smallest possible strip of working software running through all layers — database, API, frontend. Each feature in this specification is a vertical slice.</li>
+    </ul>
+  </div>
+
+  <!-- Appendix C -->
+  <div class="section" id="mvp">
+    <div class="section-header">
+      <span class="section-num">C</span>
+      <h2 class="section-title">Appendix C — MVP Reference</h2>
+    </div>
+    <p>The working MVP (<code>bjj-game-plan-builder.html</code>) is in this repository. It serves as the visual and behavioural reference for all frontend development, and as a demonstration that the concept works before the full build begins.</p>
+  </div>
+
+  <div class="doc-footer">
+    This document was co-authored with Claude (Anthropic) as a demonstration of AI-assisted specification and architectural design by a non-engineer with a data and API background.
+  </div>
+
+</div>
+</body>
+</html>
