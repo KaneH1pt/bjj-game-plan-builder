@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -364,7 +365,7 @@
 
   <!-- Cover -->
   <div class="cover">
-    <div class="subtitle">Product Specification — Version 1.0</div>
+    <div class="subtitle">Product Specification — Version 1.1</div>
     <h1>Personal BJJ Game Graph</h1>
     <p>Brazilian Jiu-Jitsu practitioners hold a large number of positions, transitions, and opponent reactions in their head simultaneously. Knowing what to do is only part of the challenge — understanding which parts of your game are reliable, which are developing, and which are only just being explored requires a different kind of awareness.</p>
     <p>This tool is a personal development aid: a visual graph that maps a practitioner's own game, so they can see it, navigate it, and build it deliberately.</p>
@@ -375,6 +376,7 @@
       <span class="label">Co-authored with</span><span class="value">Claude (Anthropic)</span>
       <span class="label">Repository</span><span class="value">github.com/KaneH1pt/bjj-game-plan-builder</span>
       <span class="label">Status</span><span class="value">MVP complete. Full build in specification.</span>
+      <span class="label">Version</span><span class="value">1.1 — revised following AI engineering specialist review</span>
     </div>
   </div>
 
@@ -401,6 +403,7 @@
       <li><a href="#costs">Appendix A — Costs</a></li>
       <li><a href="#glossary">Appendix B — Glossary</a></li>
       <li><a href="#mvp">Appendix C — MVP Reference</a></li>
+      <li><a href="#review">Appendix D — Version History</a></li>
     </ol>
   </div>
 
@@ -568,7 +571,17 @@
 
     <p><strong>Cost safeguarding:</strong> Agents only trigger on issues and pull requests the product owner has explicitly labelled. One agent run per feature. A hard token budget is set in each agent prompt. Supabase and Railway both hard-stop at free tier limits rather than charging overages.</p>
 
+    <p><strong>Post-run validation:</strong> After each agent run, the product owner must manually verify that a branch exists in the repository and contains actual code before the test agent proceeds. This prevents wasted tokens on a run that silently failed to produce output.</p>
+
+    <p><strong>Secret handling:</strong> GitHub injects credentials as environment variables into the runner at runtime. Agents consume the capability the secret unlocks — they make API calls that work because credentials are present in the environment — but they never read, log, or transmit the secret value itself. The credential is never in the agent's hands, only its effect is. All YAML workflow files reference secrets as <code>${{ secrets.SECRET_NAME }}</code> placeholders only — raw values are never hardcoded or committed to the repository. Agents must never log or print environment variables under any circumstance.</p>
+
     <p><strong>Security:</strong> <code>GITHUB_TOKEN</code> scoped to the repository, expires at end of each run. All credentials stored as GitHub Secrets — encrypted, never visible in code. Only the product owner (Kane Hellewell) can merge.</p>
+
+    <h4>Model Selection</h4>
+    <p>Different agents have different requirements. The dev agent generates the most complex output and benefits from the most capable model available. The test agent runs structured BDD scenarios — a fast, cost-efficient model is appropriate. The review agent reads and reasons but does not generate code — a mid-tier model balances quality and cost. Model selection should be reviewed against current benchmarks and pricing before the first agent run, and is not hardcoded in this specification.</p>
+
+    <h4>Public Repo and API Key Hygiene</h4>
+    <p>This repository is public. All workflow files use placeholder values for API keys — for example <code>&lt;insert-api-key-here&gt;</code> — so that anyone can fork the project and supply their own credentials. The author's actual API keys are never committed. Anyone using this repo as a reference must supply their own agent keys and will not have access to the author's agents or infrastructure.</p>
   </div>
 
   <!-- Section 2 -->
@@ -1026,6 +1039,26 @@ And the form shows "Too many attempts. Please try again later."</pre>
       <h2 class="section-title">Appendix C — MVP Reference</h2>
     </div>
     <p>The working MVP (<code>bjj-game-plan-builder.html</code>) is in this repository. It serves as the visual and behavioural reference for all frontend development, and as a demonstration that the concept works before the full build begins.</p>
+  </div>
+
+  <!-- Appendix D -->
+  <div class="section" id="review">
+    <div class="section-header">
+      <span class="section-num">D</span>
+      <h2 class="section-title">Appendix D — Version History</h2>
+    </div>
+
+    <h3>Version 1.1</h3>
+    <p>Revised following a review with an AI engineering specialist. The following additions were made:</p>
+    <ul class="spec-list">
+      <li><strong>Post-run validation:</strong> Product owner must manually verify a branch exists with actual code after each agent run before proceeding — prevents silent failures wasting API credits.</li>
+      <li><strong>Secret abstraction and handling:</strong> Clarified that GitHub injects secrets at runtime and agents consume their effect, not their value. Agents must never read, log, or transmit environment variables. YAML files use placeholders only.</li>
+      <li><strong>Model selection rationale:</strong> Added guidance that different agents warrant different models based on task complexity, benchmarks, and cost — and that model choice should be reviewed before the first run rather than hardcoded.</li>
+      <li><strong>Public repo and API key hygiene:</strong> Workflow files use <code>&lt;insert-api-key-here&gt;</code> placeholders so the repo can be forked and used by others with their own credentials. The author's keys are never committed or shared.</li>
+    </ul>
+
+    <h3>Version 1.0</h3>
+    <p>Initial specification. Covers authentication, nodes, connectors, security requirements (SEC-01 to SEC-16), agent pipeline, environments, roles and responsibilities, costs, and MVP reference.</p>
   </div>
 
   <div class="doc-footer">
