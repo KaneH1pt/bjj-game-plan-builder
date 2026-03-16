@@ -365,7 +365,7 @@
 
   <!-- Cover -->
   <div class="cover">
-    <div class="subtitle">Product Specification — Version 1.1</div>
+    <div class="subtitle">Product Specification — Version 1.3</div>
     <h1>Personal BJJ Game Graph</h1>
     <p>Brazilian Jiu-Jitsu practitioners hold a large number of positions, transitions, and opponent reactions in their head simultaneously. Knowing what to do is only part of the challenge — understanding which parts of your game are reliable, which are developing, and which are only just being explored requires a different kind of awareness.</p>
     <p>This tool is a personal development aid: a visual graph that maps a practitioner's own game, so they can see it, navigate it, and build it deliberately.</p>
@@ -376,7 +376,7 @@
       <span class="label">Co-authored with</span><span class="value">Claude (Anthropic)</span>
       <span class="label">Repository</span><span class="value">github.com/KaneH1pt/bjj-game-plan-builder</span>
       <span class="label">Status</span><span class="value">MVP complete. Full build in specification.</span>
-      <span class="label">Version</span><span class="value">1.1 — revised following AI engineering specialist review</span>
+      <span class="label">Version</span><span class="value">1.3 — manual setup completed; pre-functional task list updated</span>
     </div>
   </div>
 
@@ -452,22 +452,46 @@
       <p>The working MVP (<code>bjj-game-plan-builder.html</code>) is a single file with data hardcoded as JSON. It proves the concept works and is the visual and behavioural reference for all frontend development.</p>
     </div>
 
+    <div class="decision">
+      <div class="decision-title">Why not building a walking skeleton with account creation</div>
+      <p>A walking skeleton — the thinnest possible slice through all layers including account creation — is a common starting point. It is not used here for deliberate security reasons. An open signup page is the highest-risk surface in the application: it is reachable by anyone on the internet without credentials. Before exposing that surface, the product needs to be user-tested in a controlled environment, the security posture needs to be validated, and sufficient engineering input needs to have been gathered on the approach. The closed beta phase serves this purpose — users are onboarded manually, the core graph functionality is tested and refined, and public signup is introduced only when there is confidence in the security implementation. Nothing is lost by deferring this: all signup scenarios are written and ready to build.</p>
+    </div>
+
     <h3>Pre-Functional Task List</h3>
     <p>These tasks must be completed before any agent work begins. Split into two groups — tasks the product owner must do manually, and tasks the dev agent handles.</p>
 
     <h4>Product Owner — Manual Setup</h4>
-    <p>These require account creation or credential management that agents cannot do.</p>
+    <p>These require account creation or credential management that agents cannot do. All credentials should be stored in a password manager — Bitwarden is recommended (free, open source, works across devices).</p>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Task</th><th>Why</th><th>Done when</th></tr></thead>
+        <thead><tr><th>Task</th><th>Why</th><th>Done when</th><th>Status</th></tr></thead>
         <tbody>
-          <tr><td>Create Supabase test project</td><td>Separate database for automated testing — agents must never touch production data</td><td>Project live, connection string available</td></tr>
-          <tr><td>Create Supabase production project</td><td>Live database for real users. Provides auth mechanism — Feature: Authentication builds on top, it does not create auth from scratch.</td><td>Project live, connection string available, auth config ready</td></tr>
-          <tr><td>Create Railway test deployment</td><td>Backend for test environment</td><td>Deployment live, URL available</td></tr>
-          <tr><td>Create Railway production deployment</td><td>Backend for production environment</td><td>Deployment live, URL available</td></tr>
-          <tr><td>Create Vercel deployment</td><td>Frontend hosting, auto-deploys from GitHub main</td><td>Blank app loads at Vercel URL</td></tr>
-          <tr><td>Add all credentials to GitHub Secrets</td><td>Agents consume secrets — they never create them</td><td>All secrets present: <code>SUPABASE_URL_TEST</code>, <code>SUPABASE_ANON_KEY_TEST</code>, <code>SUPABASE_URL_PROD</code>, <code>SUPABASE_ANON_KEY_PROD</code>, <code>CAPTCHA_TEST_KEY</code>, <code>CAPTCHA_SITE_KEY_PROD</code></td></tr>
-          <tr><td>Enable Dependabot on GitHub</td><td>Automatic alerts for vulnerable dependencies</td><td>Dependabot enabled in GitHub settings</td></tr>
+          <tr><td>Set up Bitwarden</td><td>Secure storage for all credentials, URLs and keys generated during setup</td><td>Account created, vault accessible</td><td><span class="badge fav">✓ done</span></td></tr>
+          <tr><td>Create Supabase test project</td><td>Separate database for automated testing — agents must never touch production data</td><td>Project live, URL and anon key saved to Bitwarden</td><td><span class="badge fav">✓ done</span></td></tr>
+          <tr><td>Create Supabase production project</td><td>Live database for real users. Provides auth mechanism — Feature: Authentication builds on top, it does not create auth from scratch.</td><td>Project live, URL and anon key saved to Bitwarden</td><td><span class="badge fav">✓ done</span></td></tr>
+          <tr><td>Create Railway test project</td><td>Will host the FastAPI backend for the test environment — dev agent deploys to this</td><td>Empty project created in Railway</td><td><span class="badge fav">✓ done</span></td></tr>
+          <tr><td>Create Railway production project</td><td>Will host the FastAPI backend for the production environment</td><td>Empty project created in Railway</td><td><span class="badge fav">✓ done</span></td></tr>
+          <tr><td>Create Vercel deployment</td><td>Frontend hosting, auto-deploys from GitHub main on every commit</td><td>Repo connected to Vercel, Vercel URL saved to Bitwarden</td><td><span class="badge fav">✓ done</span></td></tr>
+          <tr><td>Add all credentials to GitHub Secrets</td><td>Agents consume secrets — they never create them. GitHub injects them at runtime, agents never see the raw values.</td><td>All secrets present: <code>SUPABASE_URL_TEST</code>, <code>SUPABASE_ANON_KEY_TEST</code>, <code>SUPABASE_URL_PROD</code>, <code>SUPABASE_ANON_KEY_PROD</code></td><td><span class="badge fav">✓ done</span></td></tr>
+          <tr><td>Enable Dependabot on GitHub</td><td>Automatic alerts and pull requests for vulnerable dependencies</td><td>Dependabot alerts and security updates both enabled in GitHub Settings → Code Security</td><td><span class="badge fav">✓ done</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4>Product Owner — Agent Setup</h4>
+    <p>These tasks connect the agents to the repository and infrastructure. Must be completed before raising the first <code>setup</code> issue.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Task</th><th>Why</th><th>Done when</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Create Anthropic API account</td><td>Required to call the Claude API — this is the brain for all three agents</td><td>Account created at console.anthropic.com</td><td><span class="badge evo">pending</span></td></tr>
+          <tr><td>Generate Anthropic API key</td><td>The key the agents use to authenticate with the Claude API</td><td>Key generated and saved to Bitwarden</td><td><span class="badge evo">pending</span></td></tr>
+          <tr><td>Add <code>ANTHROPIC_API_KEY</code> to GitHub Secrets</td><td>Agents consume the key at runtime — they never see the raw value, GitHub injects it</td><td>Secret present in GitHub repo Settings → Secrets → Actions</td><td><span class="badge evo">pending</span></td></tr>
+          <tr><td>Write <code>.github/workflows/dev-agent.yml</code></td><td>Defines the dev agent — trigger, model, prompt, Claude Code integration, token budget</td><td>File committed to repo, workflow visible in GitHub Actions tab</td><td><span class="badge evo">pending</span></td></tr>
+          <tr><td>Write <code>.github/workflows/test-agent.yml</code></td><td>Defines the test agent — trigger, model, BDD scenario runner</td><td>File committed to repo, workflow visible in GitHub Actions tab</td><td><span class="badge evo">pending</span></td></tr>
+          <tr><td>Write <code>.github/workflows/review-agent.yml</code></td><td>Defines the review agent — trigger (test agent passes), model, compliance report format</td><td>File committed to repo, workflow visible in GitHub Actions tab</td><td><span class="badge evo">pending</span></td></tr>
+          <tr><td>Configure <code>GITHUB_TOKEN</code> permissions</td><td>Scopes what the agent can do in the repo — read files, create branches, raise pull requests. Nothing more.</td><td>Permissions set in each workflow file — <code>contents: write</code>, <code>pull-requests: write</code></td><td><span class="badge evo">pending</span></td></tr>
+          <tr><td>Dry run</td><td>Verify the agent triggers correctly, reads the repo, and produces output before trusting it with real feature work</td><td>Test issue labelled <code>build</code> raised, agent fires, branch created with visible output. Product owner manually inspects before proceeding.</td><td><span class="badge evo">pending</span></td></tr>
         </tbody>
       </table>
     </div>
@@ -493,7 +517,6 @@
         <thead><tr><th>Route</th><th>Purpose</th></tr></thead>
         <tbody>
           <tr><td><code>/login</code></td><td>Login page</td></tr>
-          <tr><td><code>/signup</code></td><td>Create account page</td></tr>
           <tr><td><code>/home</code></td><td>Main graph view — requires authentication</td></tr>
         </tbody>
       </table>
@@ -522,8 +545,7 @@
         <tbody>
           <tr><td><strong>Trigger</strong></td><td>Pull request opened</td><td>Merge to main branch</td></tr>
           <tr><td><strong>Database</strong></td><td>Supabase test project</td><td>Supabase production project</td></tr>
-          <tr><td><strong>CAPTCHA</strong></td><td>Bypassed using hCaptcha/Turnstile test key</td><td>Enforced</td></tr>
-          <tr><td><strong>Rate limiting</strong></td><td>Relaxed — agents must be able to run full scenario suites without hitting limits</td><td>Full — 60 req/user/min, 5 signups/IP/hour</td></tr>
+          <tr><td><strong>Rate limiting</strong></td><td>Relaxed — agents must be able to run full scenario suites without hitting limits</td><td>Full — 60 req/user/min</td></tr>
           <tr><td><strong>URL</strong></td><td>Railway test deployment</td><td>Railway production deployment</td></tr>
         </tbody>
       </table>
@@ -536,7 +558,7 @@
         <tbody>
           <tr><td>Supabase URL</td><td><code>SUPABASE_URL_TEST</code></td><td><code>SUPABASE_URL_PROD</code></td></tr>
           <tr><td>Supabase anon key</td><td><code>SUPABASE_ANON_KEY_TEST</code></td><td><code>SUPABASE_ANON_KEY_PROD</code></td></tr>
-          <tr><td>CAPTCHA test key</td><td><code>CAPTCHA_TEST_KEY</code></td><td><code>CAPTCHA_SITE_KEY_PROD</code></td></tr>
+
         </tbody>
       </table>
     </div>
@@ -577,8 +599,20 @@
 
     <p><strong>Security:</strong> <code>GITHUB_TOKEN</code> scoped to the repository, expires at end of each run. All credentials stored as GitHub Secrets — encrypted, never visible in code. Only the product owner (Kane Hellewell) can merge.</p>
 
-    <h4>Model Selection</h4>
-    <p>Different agents have different requirements. The dev agent generates the most complex output and benefits from the most capable model available. The test agent runs structured BDD scenarios — a fast, cost-efficient model is appropriate. The review agent reads and reasons but does not generate code — a mid-tier model balances quality and cost. Model selection should be reviewed against current benchmarks and pricing before the first agent run, and is not hardcoded in this specification.</p>
+    <p><strong>Why Claude API and Claude Code:</strong> The LLM is called via the Anthropic API. Claude Code is used to interact with the repository — reading files, writing code, creating branches, raising pull requests. Both are Anthropic products. Either can be swapped independently without rebuilding the other. They are kept consistent here for simplicity and because the integration between them is well-tested.</p>
+
+    <p><strong>Why different models per agent:</strong> Each agent's instructions are defined in its YAML file, following the roles and responsibilities in this specification. The model determines the capability of the LLM executing those instructions. Matching model to task keeps costs proportionate — the dev agent performs the most complex task and uses Opus, the review agent uses Sonnet, the test agent uses Haiku. Opus costs roughly 15x more per token than Haiku. Model selection should be reviewed against current benchmarks and pricing before the first agent run.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Agent</th><th>Model</th><th>Reason</th></tr></thead>
+        <tbody>
+          <tr><td>Dev Agent</td><td><code>claude-opus-4-6</code></td><td>Complex multi-step code generation from spec</td></tr>
+          <tr><td>Review Agent</td><td><code>claude-sonnet-4-6</code></td><td>Reasoning and compliance reporting</td></tr>
+          <tr><td>Test Agent</td><td><code>claude-haiku-4-5</code></td><td>Structured pass/fail BDD scenario execution</td></tr>
+        </tbody>
+      </table>
+    </div>
 
     <h4>Public Repo and API Key Hygiene</h4>
     <p>This repository is public. All workflow files use placeholder values for API keys — for example <code>&lt;insert-api-key-here&gt;</code> — so that anyone can fork the project and supply their own credentials. The author's actual API keys are never committed. Anyone using this repo as a reference must supply their own agent keys and will not have access to the author's agents or infrastructure.</p>
@@ -590,52 +624,14 @@
       <span class="section-num">02</span>
       <h2 class="section-title">Feature: Authentication</h2>
     </div>
-    <p>A user must be able to create an account and log in before accessing any part of the application. All data is private by default — a user can only see and edit their own game graph. Login and create account are separate pages, each doing one thing.</p>
+    <p>A user must be able to log in before accessing any part of the application. All data is private by default — a user can only see and edit their own game graph.</p>
+    <p><strong>Closed beta:</strong> In the initial release, there is no public signup page. User accounts are created manually by the product owner via the Supabase dashboard. Users receive their credentials directly and log in at <code>/login</code>. Public self-service signup is a future milestone — all signup scenarios are written and ready to build when that phase begins.</p>
 
     <h4>Scenarios</h4>
     <div class="scenario-block">
 
       <div class="scenario">
-        <div class="scenario-title">AUTH-01 — New user creates an account</div>
-        <pre>Given I am on the /signup page
-When I enter a username into the username field
-And I enter a password into the password field
-And I click "Create account"
-Then I am redirected to /home
-And I see a logout button in the top right corner
-And I see the message "Click 'Add Position' to add your first position"</pre>
-      </div>
-
-      <div class="scenario">
-        <div class="scenario-title">AUTH-02 — User tries to create an account with an invalid username</div>
-        <pre>Given I am on the /signup page
-When I enter a username containing invalid characters (e.g. "kane hellewell!")
-And I enter a valid password and click "Create account"
-Then I see "Username must be 3–30 characters and contain only letters, numbers, underscores, or hyphens"
-And no account is created and the form stays open</pre>
-      </div>
-
-      <div class="scenario">
-        <div class="scenario-title">AUTH-03 — User tries to create an account with a weak password</div>
-        <pre>Given I am on the /signup page
-When I enter a valid username
-And I enter a password that does not meet the requirements (e.g. "password")
-And I click "Create account"
-Then I see "Password must be at least 10 characters and include an uppercase letter, a lowercase letter, and a number"
-And no account is created and the form stays open</pre>
-      </div>
-
-      <div class="scenario">
-        <div class="scenario-title">AUTH-04 — User tries to create an account with a username already taken</div>
-        <pre>Given I am on the /signup page
-When I enter a username that is already registered
-And I enter a valid password and click "Create account"
-Then I see "That username is already taken"
-And no account is created and the form stays open</pre>
-      </div>
-
-      <div class="scenario">
-        <div class="scenario-title">AUTH-05 — Returning user logs in</div>
+        <div class="scenario-title">AUTH-01 — Returning user logs in</div>
         <pre>Note: test with a user who has an existing game graph.
 Also test with a new user who has no graph — empty state message should appear.
 
@@ -647,7 +643,7 @@ And my current game graph is visible, including any previously saved nodes and c
       </div>
 
       <div class="scenario">
-        <div class="scenario-title">AUTH-06 — User enters incorrect credentials</div>
+        <div class="scenario-title">AUTH-02 — User enters incorrect credentials</div>
         <pre>Given I am on the /login page
 When I enter incorrect credentials and click "Log in"
 Then I see "Incorrect username or password"
@@ -655,14 +651,14 @@ And I remain on the /login page</pre>
       </div>
 
       <div class="scenario">
-        <div class="scenario-title">AUTH-07 — Unauthenticated user tries to access the app</div>
+        <div class="scenario-title">AUTH-03 — Unauthenticated user tries to access the app</div>
         <pre>Given I am not logged in
 When I navigate to /home
 Then I am redirected to /login</pre>
       </div>
 
       <div class="scenario">
-        <div class="scenario-title">AUTH-08 — User logs out successfully</div>
+        <div class="scenario-title">AUTH-04 — User logs out successfully</div>
         <pre>Given I am logged in and on /home
 When I click the logout button in the top right corner
 Then I am redirected to /login
@@ -671,7 +667,7 @@ And I am able to log in again without reloading the page</pre>
       </div>
 
       <div class="scenario">
-        <div class="scenario-title">AUTH-09 — Logout fails</div>
+        <div class="scenario-title">AUTH-05 — Logout fails</div>
         <pre>Given I am logged in and on /home
 When I click the logout button and the request fails
 Then I see "Logout failed. Please try again."
@@ -680,7 +676,7 @@ And I remain on /home</pre>
       </div>
 
       <div class="scenario">
-        <div class="scenario-title">AUTH-10 — Idle session expires</div>
+        <div class="scenario-title">AUTH-06 — Idle session expires</div>
         <pre>Given I am logged in
 When I have been inactive for 30 minutes
 Then I am automatically logged out
@@ -690,12 +686,57 @@ And I see "Your session has expired. Please log in again."</pre>
 
     </div>
 
+    <h3>Deferred — Public Signup (future milestone)</h3>
+    <p>These scenarios are written and ready. They will be built when the closed beta phase ends and the app opens to public self-service signup.</p>
+    <div class="scenario-block">
+
+      <div class="scenario">
+        <div class="scenario-title">AUTH-07 — New user creates an account</div>
+        <pre>Given I am on the /signup page
+When I enter a username into the username field
+And I enter a password into the password field
+And I click "Create account"
+Then I am redirected to /home
+And I see a logout button in the top right corner
+And I see the message "Click 'Add Position' to add your first position"</pre>
+      </div>
+
+      <div class="scenario">
+        <div class="scenario-title">AUTH-08 — User tries to create an account with an invalid username</div>
+        <pre>Given I am on the /signup page
+When I enter a username containing invalid characters (e.g. "kane hellewell!")
+And I enter a valid password and click "Create account"
+Then I see "Username must be 3–30 characters and contain only letters, numbers, underscores, or hyphens"
+And no account is created and the form stays open</pre>
+      </div>
+
+      <div class="scenario">
+        <div class="scenario-title">AUTH-09 — User tries to create an account with a weak password</div>
+        <pre>Given I am on the /signup page
+When I enter a valid username
+And I enter a password that does not meet the requirements (e.g. "password")
+And I click "Create account"
+Then I see "Password must be at least 10 characters and include an uppercase letter, a lowercase letter, and a number"
+And no account is created and the form stays open</pre>
+      </div>
+
+      <div class="scenario">
+        <div class="scenario-title">AUTH-10 — User tries to create an account with a username already taken</div>
+        <pre>Given I am on the /signup page
+When I enter a username that is already registered
+And I enter a valid password and click "Create account"
+Then I see "That username is already taken"
+And no account is created and the form stays open</pre>
+      </div>
+
+    </div>
+
     <h4>Technical Notes</h4>
     <ul class="spec-list">
       <li><strong>Authentication provider:</strong> Supabase Auth. Username and password only.</li>
-      <li><strong>Signup form fields:</strong> The signup form contains two fields only — username and password. No email field. No confirm password field. Token-based auth via Google is a future consideration.</li>
-      <li><strong>Username validation:</strong> 3–30 characters. Letters, numbers, underscores, and hyphens only — no spaces or other special characters. Case insensitive. Must be unique.</li>
-      <li><strong>Password validation:</strong> Minimum 10 characters. Must contain at least one uppercase letter, one lowercase letter, and one number. No maximum length — password managers must be supported. Never stored in plain text — hashed by Supabase before reaching the database.</li>
+      <li><strong>Account creation (closed beta):</strong> Accounts are created manually by the product owner in the Supabase Auth dashboard. Username and password only. No signup page in this phase.</li>
+      <li><strong>Username rules:</strong> 3–30 characters. Letters, numbers, underscores, and hyphens only. Case insensitive. Must be unique.</li>
+      <li><strong>Password rules:</strong> Minimum 10 characters. Must contain at least one uppercase letter, one lowercase letter, and one number. No maximum length. Never stored in plain text — hashed by Supabase.</li>
       <li><strong>Token handling:</strong> On login, Supabase returns a JWT. The frontend includes it in every API call header. The backend validates it and extracts the user ID to scope all data queries.</li>
       <li><strong>Token storage:</strong> Memory or secure httpOnly cookie. Never localStorage.</li>
       <li><strong>Idle timeout:</strong> 30 minutes of inactivity triggers automatic logout and redirect to /login.</li>
@@ -958,10 +999,11 @@ And the panel updates if I click a different connector or node</pre>
       <li><strong>SEC-16 — No verbose errors in production:</strong> The production environment must never return stack traces, internal error messages, or framework debug output to the client. All unhandled errors return a generic <code>500 Internal Server Error</code> response. Verbose error detail is permitted in the test environment only.</li>
     </ul>
 
-    <h4>Scenario</h4>
+    <h4>Deferred Scenario</h4>
+    <p>SEC-13 is deferred to the Public Signup milestone. It covers SEC-09 and SEC-10 which are not active in the closed beta phase.</p>
     <div class="scenario-block">
       <div class="scenario">
-        <div class="scenario-title">SEC-13 — Bot attempts mass account creation (covers SEC-09, SEC-10)</div>
+        <div class="scenario-title">SEC-13 — Bot attempts mass account creation (covers SEC-09, SEC-10) — deferred</div>
         <pre>Given a script attempts to create more than 5 accounts from the same IP within one hour
 When the 6th attempt is made
 Then the request is rejected
@@ -982,6 +1024,7 @@ And the form shows "Too many attempts. Please try again later."</pre>
         <thead><tr><th>Milestone</th><th>What it delivers</th></tr></thead>
         <tbody>
           <tr><td>Edit &amp; Delete</td><td>Update or remove nodes and connectors in the browser</td></tr>
+          <tr><td>Public signup</td><td>Self-service account creation — opens the app beyond closed beta. All signup scenarios (AUTH-07 to AUTH-10) and SEC-13 are written and ready to build.</td></tr>
           <tr><td>Video links</td><td>Attach YouTube reference links to nodes and connectors</td></tr>
           <tr><td>Sharing</td><td>Read-only share link — viewable without logging in</td></tr>
           <tr><td>Forgotten password</td><td>Self-service password reset flow</td></tr>
@@ -1047,6 +1090,26 @@ And the form shows "Too many attempts. Please try again later."</pre>
       <span class="section-num">D</span>
       <h2 class="section-title">Appendix D — Version History</h2>
     </div>
+
+    <h3>Version 1.3</h3>
+    <p>Manual infrastructure setup completed by product owner.</p>
+    <ul class="spec-list">
+      <li><strong>Bitwarden added:</strong> Recommended as the password manager for storing all credentials, URLs and keys. Added as the first manual setup task.</li>
+      <li><strong>Pre-functional task list updated:</strong> Status column added. All product owner manual setup tasks marked as complete. Railway tasks clarified — empty projects only at this stage, dev agent handles deployment.</li>
+      <li><strong>Done when column clarified:</strong> Railway tasks previously said "URL available" which implied the URL exists at manual setup time. Corrected to reflect that Railway URLs are generated by the dev agent after deployment, not by the product owner.</li>
+    </ul>
+
+    <h3>Version 1.2</h3>
+    <p>Closed beta approach adopted following product decision to defer public signup.</p>
+    <ul class="spec-list">
+      <li><strong>Authentication restructured:</strong> Login-only for closed beta. AUTH-01 to AUTH-06 cover login and session management. Signup scenarios renumbered as AUTH-07 to AUTH-10 and moved to the Public Signup future milestone.</li>
+      <li><strong>No signup page in initial build:</strong> Accounts created manually by the product owner via Supabase dashboard. Removes the highest-risk public attack surface until the app is ready to open.</li>
+      <li><strong>URL structure updated:</strong> <code>/signup</code> removed. Only <code>/login</code> and <code>/home</code> in scope for this phase.</li>
+      <li><strong>CAPTCHA deferred:</strong> Not needed until public signup is introduced.</li>
+      <li><strong>SEC-13 deferred:</strong> Bot mass account creation scenario deferred to the Public Signup milestone alongside SEC-09 and SEC-10 which it covers.</li>
+      <li><strong>Milestone order corrected:</strong> Edit &amp; Delete now precedes Public Signup. Public Signup milestone updated to reference AUTH-07 to AUTH-10 and SEC-13 as ready to build.</li>
+      <li><strong>Design decision added — why not a walking skeleton:</strong> Documented the deliberate choice not to start with account creation. An open signup page is the highest-risk surface in the application. The closed beta phase allows user testing and security validation in a controlled environment before that surface is exposed.</li>
+    </ul>
 
     <h3>Version 1.1</h3>
     <p>Revised following a review with an AI engineering specialist. The following additions were made:</p>
