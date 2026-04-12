@@ -1,0 +1,94 @@
+name: Dev Agent
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  dev-agent:
+    if: github.event.label.name == 'build'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Create feature branch
+        id: branch
+        run: |
+          BRANCH_NAME="feature/issue-${{ github.event.issue.number }}"
+          git checkout -b "$BRANCH_NAME"
+          echo "branch=$BRANCH_NAME" >> $GITHUB_OUTPUT
+
+      - name: Run Dev Agent
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SUPABASE_URL_TEST: ${{ secrets.SUPABASE_URL_TEST }}
+          SUPABASE_ANON_KEY_TEST: ${{ secrets.SUPABASE_ANON_KEY_TEST }}
+          SUPABASE_URL_PROD: ${{ secrets.SUPABASE_URL_PROD }}
+          SUPABASE_ANON_KEY_PROD: ${{ secrets.SUPABASE_ANON_KEY_PROD }}
+          CAPTCHA_TEST_KEY: ${{ secrets.CAPTCHA_TEST_KEY }}
+          CAPTCHA_SITE_KEY_PROD: ${{ secrets.CAPTCHA_SITE_KEY_PROD }}
+        run: |
+          claude -p \
+            "You are a dev agent building the BJJ Game Graph application.
+
+            Step 1 — Read the specification file BJJ_Game_Tree_Specification.html before writing any code.
+
+            Step 2 — Implement this GitHub Issue:
+            Title: ${{ github.event.issue.title }}
+            Body: ${{ github.event.issue.body }}
+
+            Rules you must follow:
+            - Implement exactly what the specification says. Do not interpret loosely.
+            - Do not modify the specification file.
+            - Do not merge your own pull request.
+            - All credentials are available as environment variables. Never hardcode a value.
+            - Use parameterised queries only — no raw string interpolation with user input (SEC-14).
+            - Production must never return stack traces or verbose error detail (SEC-16).
+            - If you cannot implement something as specified, leave a comment in the pull request body explaining why. Do not change the spec to fit what you built.
+
+            Environment variables available at runtime (already injected — reference by name only):
+            SUPABASE_URL_TEST, SUPABASE_ANON_KEY_TEST,
+            SUPABASE_URL_PROD, SUPABASE_ANON_KEY_PROD,
+            CAPTCHA_TEST_KEY, CAPTCHA_SITE_KEY_PROD
+
+            Token budget: complete your implementation within 8,000 output tokens." \
+            --model claude-opus-4-6 \
+            --yes-always
+
+      - name: Commit and push
+        run: |
+          git config user.name "Dev Agent"
+          git config user.email "dev-agent@github-actions"
+          git add -A
+          git diff --cached --quiet || git commit -m "feat: implement ${{ github.event.issue.title }} (closes #${{ github.event.issue.number }})"
+          git push origin ${{ steps.branch.outputs.branch }}
+
+      - name: Raise pull request
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --title "feat: ${{ github.event.issue.title }}" \
+            --body "Implements #${{ github.event.issue.number }}.
+
+          Raised by Dev Agent. Awaiting test agent and review agent before product owner review.
+
+          ---
+          _This pull request was opened automatically. Do not merge without test and review agent reports._" \
+            --base main \
+            --head ${{ steps.branch.outputs.branch }}
