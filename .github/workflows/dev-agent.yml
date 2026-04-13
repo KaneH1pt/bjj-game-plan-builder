@@ -60,6 +60,7 @@ jobs:
             - Use parameterised queries only — no raw string interpolation with user input (SEC-14).
             - Production must never return stack traces or verbose error detail (SEC-16).
             - If you cannot implement something as specified, leave a comment in the pull request body explaining why. Do not change the spec to fit what you built.
+            - Implement only what is explicitly requested in the issue. If the issue specifies a single scenario, implement that scenario only and nothing more. Stop when that scenario is complete.
 
             Environment variables available at runtime (already injected — reference by name only):
             SUPABASE_URL_TEST, SUPABASE_ANON_KEY_TEST,
