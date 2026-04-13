@@ -6,7 +6,7 @@ on:
 
 jobs:
   dev-agent:
-    if: github.event.label.name == 'build'
+    if: github.event.label.name == 'build' || github.event.label.name == 'setup'
     runs-on: ubuntu-latest
     permissions:
       contents: write
