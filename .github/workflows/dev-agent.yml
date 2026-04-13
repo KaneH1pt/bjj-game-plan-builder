@@ -69,7 +69,7 @@ jobs:
 
             Token budget: complete your implementation within 8,000 output tokens." \
             --model claude-opus-4-6 \
-            --yes-always
+            --dangerously-skip-permissions
 
       - name: Commit and push
         run: |
