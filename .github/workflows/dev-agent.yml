@@ -8,9 +8,11 @@ jobs:
   dev-agent:
     if: github.event.label.name == 'build' || github.event.label.name == 'setup'
     runs-on: ubuntu-latest
-    # Permissions are set at the repository level in Settings → Actions → General → Workflow permissions.
-    # Read and write permissions and allow GitHub Actions to create and approve pull requests are both enabled.
-    # No permissions block here to avoid overriding those defaults.
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      workflows: write  # Required to push files to .github/workflows/
 
     steps:
       - name: Checkout repository
