@@ -12,7 +12,6 @@ jobs:
       contents: write
       pull-requests: write
       issues: write
-      workflows: write  # Required to push files to .github/workflows/
 
     steps:
       - name: Checkout repository
@@ -61,6 +60,7 @@ jobs:
             - Use parameterised queries only — no raw string interpolation with user input (SEC-14).
             - Production must never return stack traces or verbose error detail (SEC-16).
             - If you cannot implement something as specified, leave a comment in the pull request body explaining why. Do not change the spec to fit what you built.
+            - Do not create or modify any files inside .github/workflows/ — the token does not have permission to push workflow files.
             - Implement only what is explicitly requested in the issue. If the issue specifies a single scenario, implement that scenario only and nothing more. Stop when that scenario is complete.
 
             Environment variables available at runtime (already injected — reference by name only):
