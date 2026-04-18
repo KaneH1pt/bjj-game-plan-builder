@@ -46,39 +46,42 @@ jobs:
           RAILWAY_TEST_URL: ${{ secrets.RAILWAY_TEST_URL }}
         run: |
           PR_NUMBER=$(gh pr list --state open --json number --jq '.[0].number')
+          ISSUE_BODY=$(gh pr view ${PR_NUMBER} --json body --jq '.body')
           claude -p \
             "You are a test agent for the BJJ Game Graph application.
 
             Step 1 — Read the specification file BJJ_Game_Tree_Specification.html to understand the BDD scenarios.
 
-            Step 2 — Read the pull request diff to understand what has been implemented. The pull request number is ${PR_NUMBER}.
+            Step 2 — Read pull request #${PR_NUMBER} to understand what was implemented. The PR description is:
+            ${ISSUE_BODY}
 
-            Step 3 — Write pytest tests for every BDD scenario that is in scope for the changes in this pull request. Each test must:
-            - Reference the scenario ID in its name (e.g. test_AUTH_01_returning_user_logs_in)
-            - Make real HTTP requests to the Railway test environment
-            - Assert the exact behaviour described in the scenario
-            - Be independent — each test sets up and tears down its own state
+            Step 3 — Identify the scope. The scenarios explicitly requested in the PR are the primary test targets.
 
-            Step 4 — Run the tests using pytest.
+            Step 4 — Write and run pytest tests. For each in-scope scenario:
+            - Write a test that verifies the exact behaviour described in the scenario
+            - Also write exploratory tests around the edges of that scenario — empty fields, malformed inputs, boundary conditions, unexpected responses. This is not testing other ACs, it is probing the edges of the one that was built.
+            - Each test must reference the scenario ID in its name (e.g. test_AUTH_01_returning_user_logs_in)
+            - Make real HTTP requests to the Railway test environment at ${RAILWAY_TEST_URL}
+            - Each test must be independent — set up and tear down its own state
 
-            Step 5 — Post a comment on pull request #${PR_NUMBER} with:
-            - A summary table showing each scenario ID, its name, and PASS or FAIL
+            Do not test scenarios from other ACs that were not in scope for this PR.
+
+            Step 5 — Run the tests using pytest.
+
+            Step 6 — Post a comment on pull request #${PR_NUMBER} with:
+            - The scope — which scenarios were tested
+            - A summary table showing each test, its scenario ID, and PASS or FAIL
             - Full error output for any failing test
             - A clear statement at the top: APPROVED TO MERGE or BLOCKED — do not merge
 
             Rules you must follow:
-            - Test every scenario in scope. Do not skip any silently — if a scenario cannot be tested, flag it explicitly as UNTESTABLE with a reason.
+            - Do not skip in-scope scenarios silently — if a scenario cannot be tested, flag it explicitly as UNTESTABLE with a reason.
             - Do not fix code. Do not suggest fixes. Report only.
             - If the test environment is unavailable, post a comment stating this explicitly and block the merge.
-            - Use the Railway test URL — never the production URL.
+            - Use RAILWAY_TEST_URL as the backend base URL — never localhost, never the production URL.
             - Reference scenarios by their ID (e.g. AUTH-01, NOD-03) in all output.
 
-            Environment variables available at runtime:
-            SUPABASE_URL_TEST, SUPABASE_ANON_KEY_TEST, CAPTCHA_TEST_KEY
-
-            The Railway test URL is the backend base URL for all HTTP requests. Read it from the codebase — it will be in the backend configuration or environment setup.
-
-            Token budget: complete your test run within 8,000 output tokens." \
+            Token budget: complete your test run within 6,000 output tokens." \
             --model claude-haiku-4-5-20251001 \
             --dangerously-skip-permissions
 
