@@ -58,5 +58,3 @@ jobs:
             Token budget: complete your review within 6,000 output tokens." \
             --model claude-sonnet-4-6 \
             --dangerously-skip-permissions
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
