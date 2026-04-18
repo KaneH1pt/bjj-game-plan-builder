@@ -2,7 +2,10 @@ name: Test Agent
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, reopened]
+  workflow_run:
+    workflows: ["Dev Agent"]
+    types: [completed]
 
 jobs:
   test-agent:
@@ -14,6 +17,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -39,12 +44,13 @@ jobs:
           SUPABASE_ANON_KEY_TEST: ${{ secrets.SUPABASE_ANON_KEY_TEST }}
           CAPTCHA_TEST_KEY: ${{ secrets.CAPTCHA_TEST_KEY }}
         run: |
+          PR_NUMBER=$(gh pr list --state open --json number --jq '.[0].number')
           claude -p \
             "You are a test agent for the BJJ Game Graph application.
 
             Step 1 — Read the specification file BJJ_Game_Tree_Specification.html to understand the BDD scenarios.
 
-            Step 2 — Read the pull request diff to understand what has been implemented.
+            Step 2 — Read the pull request diff to understand what has been implemented. The pull request number is ${PR_NUMBER}.
 
             Step 3 — Write pytest tests for every BDD scenario that is in scope for the changes in this pull request. Each test must:
             - Reference the scenario ID in its name (e.g. test_AUTH_01_returning_user_logs_in)
@@ -54,7 +60,7 @@ jobs:
 
             Step 4 — Run the tests using pytest.
 
-            Step 5 — Post a comment on the pull request with:
+            Step 5 — Post a comment on pull request #${PR_NUMBER} with:
             - A summary table showing each scenario ID, its name, and PASS or FAIL
             - Full error output for any failing test
             - A clear statement at the top: APPROVED TO MERGE or BLOCKED — do not merge
@@ -78,7 +84,8 @@ jobs:
       - name: Block merge on failure
         if: failure()
         run: |
-          gh pr comment ${{ github.event.pull_request.number }} \
+          PR_NUMBER=$(gh pr list --state open --json number --jq '.[0].number')
+          gh pr comment ${PR_NUMBER} \
             --body "## Test Agent — BLOCKED
 
             The test agent encountered an error and could not complete the test run. This pull request is blocked from merging until the test agent runs successfully.
