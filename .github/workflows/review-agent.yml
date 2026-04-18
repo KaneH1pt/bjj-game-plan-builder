@@ -1,0 +1,62 @@
+name: Review Agent
+
+on:
+  workflow_run:
+    workflows: ["Test Agent"]
+    types: [completed]
+
+jobs:
+  review-agent:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Run Review Agent
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER=$(gh pr list --state open --json number --jq '.[0].number')
+          claude -p \
+            "You are a review agent for the BJJ Game Graph application.
+
+            Step 1 — Read the specification file BJJ_Game_Tree_Specification.html in full.
+
+            Step 2 — Read the code changes in pull request #${PR_NUMBER}.
+
+            Step 3 — Produce a plain English compliance report and post it as a comment on pull request #${PR_NUMBER}.
+
+            Your report must:
+            - State clearly at the top: COMPLIANT or NON-COMPLIANT
+            - List every requirement covered by this pull request and whether the implementation matches the spec
+            - Reference requirements by their identifier (e.g. AUTH-01, SEC-04, NOD-03)
+            - Flag anything in the code that contradicts a requirement, even if the tests passed
+            - Flag anything in the spec that was not implemented but should have been for this feature
+            - Be written in plain English — no code blocks, no technical jargon beyond what is necessary
+
+            Rules you must follow:
+            - Do not fix code.
+            - Do not approve or merge the pull request.
+            - Do not modify the specification.
+            - Only review code that has already passed the test agent — this report is for the product owner, not a blocker.
+            - Be precise. If something does not match the spec, say exactly what the spec requires and exactly what the code does instead.
+
+            Token budget: complete your review within 6,000 output tokens." \
+            --model claude-sonnet-4-6 \
+            --dangerously-skip-permissions
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
