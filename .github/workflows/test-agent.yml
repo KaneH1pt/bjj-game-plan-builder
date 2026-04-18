@@ -1,0 +1,88 @@
+name: Test Agent
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  test-agent:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Install Python test dependencies
+        run: pip install pytest httpx pytest-asyncio --break-system-packages
+
+      - name: Run Test Agent
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SUPABASE_URL_TEST: ${{ secrets.SUPABASE_URL_TEST }}
+          SUPABASE_ANON_KEY_TEST: ${{ secrets.SUPABASE_ANON_KEY_TEST }}
+          CAPTCHA_TEST_KEY: ${{ secrets.CAPTCHA_TEST_KEY }}
+        run: |
+          claude -p \
+            "You are a test agent for the BJJ Game Graph application.
+
+            Step 1 — Read the specification file BJJ_Game_Tree_Specification.html to understand the BDD scenarios.
+
+            Step 2 — Read the pull request diff to understand what has been implemented.
+
+            Step 3 — Write pytest tests for every BDD scenario that is in scope for the changes in this pull request. Each test must:
+            - Reference the scenario ID in its name (e.g. test_AUTH_01_returning_user_logs_in)
+            - Make real HTTP requests to the Railway test environment
+            - Assert the exact behaviour described in the scenario
+            - Be independent — each test sets up and tears down its own state
+
+            Step 4 — Run the tests using pytest.
+
+            Step 5 — Post a comment on the pull request with:
+            - A summary table showing each scenario ID, its name, and PASS or FAIL
+            - Full error output for any failing test
+            - A clear statement at the top: APPROVED TO MERGE or BLOCKED — do not merge
+
+            Rules you must follow:
+            - Test every scenario in scope. Do not skip any silently — if a scenario cannot be tested, flag it explicitly as UNTESTABLE with a reason.
+            - Do not fix code. Do not suggest fixes. Report only.
+            - If the test environment is unavailable, post a comment stating this explicitly and block the merge.
+            - Use the Railway test URL — never the production URL.
+            - Reference scenarios by their ID (e.g. AUTH-01, NOD-03) in all output.
+
+            Environment variables available at runtime:
+            SUPABASE_URL_TEST, SUPABASE_ANON_KEY_TEST, CAPTCHA_TEST_KEY
+
+            The Railway test URL is the backend base URL for all HTTP requests. Read it from the codebase — it will be in the backend configuration or environment setup.
+
+            Token budget: complete your test run within 8,000 output tokens." \
+            --model claude-haiku-4-5-20251001 \
+            --dangerously-skip-permissions
+
+      - name: Block merge on failure
+        if: failure()
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --body "## Test Agent — BLOCKED
+
+            The test agent encountered an error and could not complete the test run. This pull request is blocked from merging until the test agent runs successfully.
+
+            Check the Actions log for details."
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
