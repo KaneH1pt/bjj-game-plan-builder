@@ -1,6 +1,6 @@
 # BJJ Game Plan Builder
 
-A personal tool for mapping your Brazilian Jiu-Jitsu game as a directed graph — positions, transitions, and how they connect. Built as a portfolio project demonstrating that a domain-literate non-engineer can make rigorous architectural decisions and deliver a working product using AI as an engineering tool.
+A personal tool for mapping your Brazilian Jiu-Jitsu game as a directed graph — positions, transitions, and how they connect. Built as a portfolio project demonstrating that a domain-literate non-engineer can use spec driven development to deliver a working product using AI as an engineering tool.
 
 ---
 
