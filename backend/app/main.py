@@ -1,21 +1,33 @@
 import os
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
+from app.routers.graph import router as graph_router
 
-# Rate limiting: 60 req/user/min in production, relaxed in test so agents
-# can run full scenario suites without hitting limits (see spec SEC-08).
+ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+
 RATE_LIMIT = "600/minute" if ENVIRONMENT == "test" else "60/minute"
 
 limiter = Limiter(key_func=get_remote_address, default_limits=[RATE_LIMIT])
 
 app = FastAPI()
 app.state.limiter = limiter
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[FRONTEND_URL],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
+)
+
+app.include_router(graph_router)
 
 
 @app.exception_handler(RateLimitExceeded)
@@ -28,7 +40,6 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
 
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
-    # SEC-16: Production must never return stack traces or verbose error detail.
     if ENVIRONMENT == "test":
         return JSONResponse(
             status_code=500,
